@@ -1,0 +1,30 @@
+{
+    "name": "omegaalfa/utils",
+    "description": "A comprehensive PHP utility package with common helper functions",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "omegaalfa",
+            "email": "omegaalfa@example.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Omegaalfa\\Utils\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Omegaalfa\\Utils\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
