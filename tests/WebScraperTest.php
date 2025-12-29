@@ -144,4 +144,15 @@ class WebScraperTest extends TestCase
         
         $this->assertInstanceOf(WebScraper::class, $result);
     }
+
+    public function testExtractLinksWithPathTraversal()
+    {
+        $html = '<html><body><a href="../../sensitive.html">Link</a></body></html>';
+        $baseUrl = 'https://example.com/path/';
+        $links = $this->scraper->extractLinks($html, $baseUrl);
+        
+        $this->assertIsArray($links);
+        // Should not go above root
+        $this->assertContains('https://example.com/sensitive.html', $links);
+    }
 }

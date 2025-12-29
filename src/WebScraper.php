@@ -380,7 +380,10 @@ class WebScraper
                 continue;
             }
             if ($part === '..') {
-                array_pop($normalized);
+                // Only pop if there are elements to pop (prevent going above root)
+                if (!empty($normalized)) {
+                    array_pop($normalized);
+                }
             } else {
                 $normalized[] = $part;
             }
