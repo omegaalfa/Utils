@@ -47,12 +47,20 @@ class Date
         return (int) $date1->diff($date2)->format('%r%a');
     }
 
+    /**
+     * Calculate the difference between two dates in hours.
+     * Returns a signed integer where negative values indicate date1 is after date2.
+     */
     public static function diffInHours(DateTime $date1, DateTime $date2): int
     {
         $diff = $date1->diff($date2);
         return (int) (($diff->days * 24) + $diff->h) * ($diff->invert ? -1 : 1);
     }
 
+    /**
+     * Calculate the difference between two dates in minutes.
+     * Returns a signed integer where negative values indicate date1 is after date2.
+     */
     public static function diffInMinutes(DateTime $date1, DateTime $date2): int
     {
         $diff = $date1->diff($date2);
