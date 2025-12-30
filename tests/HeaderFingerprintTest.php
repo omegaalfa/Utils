@@ -24,7 +24,7 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testDefaultHeaders(): void
     {
-        $headers = $this->fingerprint->getHeaders('https://example.com');
+        $headers = $this->fingerprint->getHeaders();
 
         $this->assertArrayHasKey('User-Agent', $headers);
         $this->assertArrayHasKey('Accept', $headers);
@@ -39,7 +39,7 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testSecFetchHeaders(): void
     {
-        $headers = $this->fingerprint->getHeaders('https://example.com');
+        $headers = $this->fingerprint->getHeaders();
 
         $this->assertArrayHasKey('Sec-Fetch-Dest', $headers);
         $this->assertArrayHasKey('Sec-Fetch-Mode', $headers);
@@ -52,18 +52,21 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testUserAgentRotation(): void
     {
-        $userAgents = [];
-
-        // Get multiple user agents to test rotation
+        $firstHeaders = $this->fingerprint->getHeaders('https://example.com');
+        $firstUA = $firstHeaders['User-Agent'];
+        
+        // Rotate multiple times to ensure we get a different UA
+        $foundDifferent = false;
         for ($i = 0; $i < 10; $i++) {
             $this->fingerprint->rotate();
             $headers = $this->fingerprint->getHeaders('https://example.com');
-            $userAgents[] = $headers['User-Agent'];
+            if ($headers['User-Agent'] !== $firstUA) {
+                $foundDifferent = true;
+                break;
+            }
         }
-
-        // Should have some variety (at least 2 different UAs)
-        $uniqueUserAgents = array_unique($userAgents);
-        $this->assertGreaterThan(1, count($uniqueUserAgents));
+        
+        $this->assertTrue($foundDifferent, 'User-Agent should change after rotation');
     }
 
     /**
@@ -71,18 +74,21 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testAcceptLanguageRotation(): void
     {
-        $languages = [];
-
-        // Get multiple languages to test rotation
+        $firstHeaders = $this->fingerprint->getHeaders('https://example.com');
+        $firstLang = $firstHeaders['Accept-Language'];
+        
+        // Rotate multiple times to ensure we get a different language
+        $foundDifferent = false;
         for ($i = 0; $i < 10; $i++) {
             $this->fingerprint->rotate();
             $headers = $this->fingerprint->getHeaders('https://example.com');
-            $languages[] = $headers['Accept-Language'];
+            if ($headers['Accept-Language'] !== $firstLang) {
+                $foundDifferent = true;
+                break;
+            }
         }
-
-        // Should have some variety
-        $uniqueLanguages = array_unique($languages);
-        $this->assertGreaterThan(1, count($uniqueLanguages));
+        
+        $this->assertTrue($foundDifferent, 'Accept-Language should change after rotation');
     }
 
     /**
@@ -92,8 +98,8 @@ class HeaderFingerprintTest extends WebScraperTestCase
     {
         $fingerprint = $this->fingerprint->withRotationOnRequest(true);
 
-        $firstHeaders = $fingerprint->getHeaders('https://example.com');
-        $secondHeaders = $fingerprint->getHeaders('https://example.com');
+        $firstHeaders = $fingerprint->getHeaders();
+        $secondHeaders = $fingerprint->getHeaders();
 
         // Headers should be different due to rotation
         $this->assertNotEquals($firstHeaders['User-Agent'], $secondHeaders['User-Agent']);
@@ -104,8 +110,8 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testNoRotationOnRequest(): void
     {
-        $firstHeaders = $this->fingerprint->getHeaders('https://example.com');
-        $secondHeaders = $this->fingerprint->getHeaders('https://example.com');
+        $firstHeaders = $this->fingerprint->getHeaders();
+        $secondHeaders = $this->fingerprint->getHeaders();
 
         // Headers should be the same (no rotation by default)
         $this->assertEquals($firstHeaders['User-Agent'], $secondHeaders['User-Agent']);
@@ -117,12 +123,46 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testManualRotation(): void
     {
-        $firstHeaders = $this->fingerprint->getHeaders('https://example.com');
+        $firstHeaders = $this->fingerprint->getHeaders();
         $this->fingerprint->rotate();
-        $secondHeaders = $this->fingerprint->getHeaders('https://example.com');
+        $secondHeaders = $this->fingerprint->getHeaders();
 
         // Headers should be different after manual rotation
         $this->assertNotEquals($firstHeaders['User-Agent'], $secondHeaders['User-Agent']);
+    }
+
+    /**
+     * Test all User-Agents are valid.
+     */
+    public function testValidUserAgents(): void
+    {
+        // Rotate several times and verify each UA is valid
+        for ($i = 0; $i < 5; $i++) {
+            $this->fingerprint->rotate();
+            $headers = $this->fingerprint->getHeaders('https://example.com');
+            
+            $this->assertArrayHasKey('User-Agent', $headers);
+            $this->assertIsString($headers['User-Agent']);
+            $this->assertNotEmpty($headers['User-Agent']);
+            $this->assertMatchesRegularExpression('/Mozilla\/5\.0/', $headers['User-Agent']);
+        }
+    }
+
+    /**
+     * Test all Accept-Language values are valid.
+     */
+    public function testValidAcceptLanguages(): void
+    {
+        // Rotate several times and verify each language is valid
+        for ($i = 0; $i < 5; $i++) {
+            $this->fingerprint->rotate();
+            $headers = $this->fingerprint->getHeaders('https://example.com');
+            
+            $this->assertArrayHasKey('Accept-Language', $headers);
+            $this->assertIsString($headers['Accept-Language']);
+            $this->assertNotEmpty($headers['Accept-Language']);
+            $this->assertMatchesRegularExpression('/^[a-z]{2}(-[A-Z]{2})?(,[a-z]{2}(-[A-Z]{2})?)*/', $headers['Accept-Language']);
+        }
     }
 
     /**
@@ -130,7 +170,7 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testSecFetchValues(): void
     {
-        $headers = $this->fingerprint->getHeaders('https://example.com');
+        $headers = $this->fingerprint->getHeaders();
 
         $this->assertEquals('document', $headers['Sec-Fetch-Dest']);
         $this->assertEquals('navigate', $headers['Sec-Fetch-Mode']);
@@ -143,9 +183,13 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testStandardHeaders(): void
     {
-        $headers = $this->fingerprint->getHeaders('https://example.com');
+        $headers = $this->fingerprint->getHeaders();
 
+        // Check that Accept header exists and contains expected values
+        $this->assertArrayHasKey('Accept', $headers);
         $this->assertStringContainsString('text/html', $headers['Accept']);
+        $this->assertStringContainsString('application/xml', $headers['Accept']);
+        
         $this->assertEquals('gzip, deflate, br', $headers['Accept-Encoding']);
         $this->assertEquals('1', $headers['DNT']);
         $this->assertEquals('1', $headers['Upgrade-Insecure-Requests']);
@@ -170,7 +214,7 @@ class HeaderFingerprintTest extends WebScraperTestCase
     {
         // Rotate many times to ensure no out-of-bounds errors
         for ($i = 0; $i < 100; $i++) {
-            $headers = $this->fingerprint->getHeaders('https://example.com');
+            $headers = $this->fingerprint->getHeaders();
             $this->assertArrayHasKey('User-Agent', $headers);
             $this->assertArrayHasKey('Accept-Language', $headers);
             $this->fingerprint->rotate();
@@ -182,17 +226,13 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testCustomUserAgent(): void
     {
-        $customUA = 'Custom Bot/1.0';
-        $fingerprint = new HeaderFingerprint();
+        $customUA = 'CustomBot/1.0';
+        $fingerprint = new HeaderFingerprint($customUA);
+        $headers = $fingerprint->getHeaders('https://example.com');
 
-        // Set custom User-Agent (if method exists)
-        if (method_exists($fingerprint, 'withUserAgent')) {
-            $fingerprint = $fingerprint->withUserAgent($customUA);
-            $headers = $fingerprint->getHeaders('https://example.com');
-        } else {
-            $this->markTestSkipped('Method withUserAgent not implemented yet');
-            $this->assertEquals($customUA, $headers['User-Agent']);
-        }
+        // Verify custom user agent is used
+        $this->assertArrayHasKey('User-Agent', $headers);
+        $this->assertEquals($customUA, $headers['User-Agent']);
     }
 
     /**
@@ -200,8 +240,8 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testHeaderConsistency(): void
     {
-        $headers1 = $this->fingerprint->getHeaders('https://example.com');
-        $headers2 = $this->fingerprint->getHeaders('https://example.com');
+        $headers1 = $this->fingerprint->getHeaders();
+        $headers2 = $this->fingerprint->getHeaders();
 
         // Same instance should return consistent headers (no rotation)
         $this->assertEquals($headers1, $headers2);
@@ -231,7 +271,7 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testBrowserLikeHeaders(): void
     {
-        $headers = $this->fingerprint->getHeaders('https://example.com');
+        $headers = $this->fingerprint->getHeaders();
 
         // User-Agent should look like a real browser
         $this->assertStringContains('Mozilla/', $headers['User-Agent']);
@@ -251,7 +291,7 @@ class HeaderFingerprintTest extends WebScraperTestCase
      */
     public function testHeaderFormatValidation(): void
     {
-        $headers = $this->fingerprint->getHeaders('https://example.com');
+        $headers = $this->fingerprint->getHeaders();
 
         // All headers should be strings
         foreach ($headers as $name => $value) {
@@ -276,8 +316,8 @@ class HeaderFingerprintTest extends WebScraperTestCase
         $fp2 = new HeaderFingerprint();
 
         $fp1->rotate();
-        $headers1 = $fp1->getHeaders('https://example.com');
-        $headers2 = $fp2->getHeaders('https://example.com');
+        $headers1 = $fp1->getHeaders();
+        $headers2 = $fp2->getHeaders();
 
         // Different instances should be independent
         // (fp2 should not be affected by fp1 rotation)

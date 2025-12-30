@@ -242,8 +242,8 @@ class Statistics
     {
         $directory = dirname($path);
         
-        if (!is_dir($directory)) {
-            mkdir($directory, 0755, true);
+        if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $directory));
         }
 
         file_put_contents($path, $this->toJson());

@@ -342,6 +342,18 @@ class CookieJarTest extends WebScraperTestCase
     }
 
     /**
+     * Test Windows path traversal protection (backslash rejection).
+     */
+    public function testWindowsPathTraversalProtection(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Invalid path: backslashes not allowed');
+
+        // This was the actual attack vector that created the malicious file
+        $this->cookieJar->saveCookiesToFile('..\\..\\..\\windows\\system32\\config\\sam');
+    }
+
+    /**
      * Test clearing all cookies.
      */
     public function testClearCookies(): void

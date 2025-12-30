@@ -199,8 +199,8 @@ class ResponseCache
         $directory = dirname($path);
         
         // Security: Use restrictive permissions
-        if (!is_dir($directory)) {
-            mkdir($directory, 0700, true);
+        if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $directory));
         }
 
         $data = [
@@ -298,6 +298,13 @@ class ResponseCache
         // Reject paths with null bytes
         if (str_contains($path, "\0")) {
             throw new \RuntimeException('Invalid path: null byte detected');
+        }
+
+        // Security: Reject paths with backslashes (Windows path separators)
+        // Backslashes are valid filename characters on Linux but indicate
+        // a path traversal attempt from Windows paths like "..\..\windows\system32\config\sam"
+        if (str_contains($path, '\\')) {
+            throw new \RuntimeException('Invalid path: backslashes not allowed');
         }
 
         // Reject absolute paths pointing to system directories
