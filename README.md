@@ -34,7 +34,7 @@ Requisitos:
 | PHP | 8.4 ou superior |
 | Extensões obrigatórias adicionais | intl e mbstring |
 | Dependências de runtime | Nenhuma |
-| Autoload | PSR-4 + arquivo de helpers |
+| Autoload | PSR-4; helpers globais são opt-in |
 
 ## Módulos
 
@@ -44,7 +44,8 @@ Requisitos:
 | Stream | Encapsular resources nativos com leitura incremental | Você precisa manipular arquivos, memória, linhas ou CSV sem carregar tudo | [Guia de Stream](src/Stream/README.md) |
 | Session | Gerenciar a sessão nativa preservando tipos | Uma aplicação HTTP pequena precisa de uma API previsível sobre `$_SESSION` | [Guia de Session](src/Session/README.md) |
 | Fibers | Agendar tarefas cooperativas em round-robin | Tarefas em uma thread precisam ceder controle explicitamente | [Guia de Fibers](src/Fibers/README.md) |
-| Helpers | Operações globais pequenas de texto, JSON, validação e debug | Um script precisa de funções diretas sem instanciar objetos | [Guia de Helpers](helpers/README.md) |
+| Helpers | Funções opcionais de texto, JSON e validação | Um script aceita importar explicitamente funções globais | [Guia de Helpers](helpers/README.md) |
+| Debug | Dump tipado com atalhos globais opcionais | Você precisa inspecionar valores durante o desenvolvimento | [Guia de Debug](src/Debug/README.md) |
 | String Utils | Operações estáticas otimizadas de string | Você precisa de consultas, slug, truncamento, random ou máscara | [Guia de String Utils](src/Str/README.md) |
 | Lock | Exclusão mútua entre processos locais | Uma operação não pode executar simultaneamente | [Guia de Lock](src/Lock/README.md) |
 | Profiler | Tempo, memória, chamadas e etapas | Você precisa localizar gargalos com dados reais | [Guia de Profiler](src/Profiler/README.md) |
@@ -72,10 +73,13 @@ flowchart TD
     A -->|Repetir falhas temporárias| L[Retry]
     A -->|Criar comandos| M[CLI]
     A -->|Transportar dados tipados| N[DTO]
+    A -->|Inspecionar valores| O[Debug]
 ```
 
 > [!IMPORTANT]
-> Os módulos são independentes em responsabilidade, mas ainda não são pacotes Composer separados. Instale `omegaalfa/utils` e importe apenas as APIs desejadas.
+> Os módulos permanecem no mesmo pacote Composer; instale omegaalfa/utils e importe somente as APIs desejadas.
+
+Os requisitos de ambiente são compartilhados enquanto os módulos estiverem no mesmo pacote. Helpers globais não são registrados automaticamente.
 
 ## Princípios do ecossistema
 

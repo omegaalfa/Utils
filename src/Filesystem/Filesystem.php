@@ -62,6 +62,7 @@ final class Filesystem
         int $permissions = 0644,
         bool $atomic = true,
     ): void {
+        $this->validatePermissions($permissions);
         $destination = $this->destinationPath($path);
 
         if (!$atomic) {
@@ -98,6 +99,7 @@ final class Filesystem
         int $permissions = 0755,
         bool $recursive = true,
     ): void {
+        $this->validatePermissions($permissions);
         $directory = $this->path($path);
 
         if (is_dir($directory)) {
@@ -129,17 +131,45 @@ final class Filesystem
         $sourcePath = $this->existingPath($source);
         $destinationPath = $this->destinationPath($destination);
 
-        if (file_exists($destinationPath) || is_link($destinationPath)) {
-            if (!$overwrite) {
-                throw new RuntimeException("Destination already exists: {$destination}");
+        if (!file_exists($destinationPath) && !is_link($destinationPath)) {
+            if (!@rename($sourcePath, $destinationPath)) {
+                throw new RuntimeException("Unable to move {$source} to {$destination}.");
             }
-            if (is_dir($destinationPath) || !@unlink($destinationPath)) {
-                throw new RuntimeException("Unable to replace destination: {$destination}");
-            }
+            return;
+        }
+
+        if (!$overwrite) {
+            throw new RuntimeException("Destination already exists: {$destination}");
+        }
+        if (is_dir($destinationPath) || !is_file($sourcePath)) {
+            throw new RuntimeException('Overwrite move supports files only.');
+        }
+
+        if (@rename($sourcePath, $destinationPath)) {
+            return;
+        }
+
+        $backup = tempnam(dirname($destinationPath), '.omega-move-');
+        if ($backup === false || !@unlink($backup)) {
+            throw new RuntimeException("Unable to prepare destination backup: {$destination}");
+        }
+        if (!@rename($destinationPath, $backup)) {
+            throw new RuntimeException("Unable to preserve destination: {$destination}");
         }
 
         if (!@rename($sourcePath, $destinationPath)) {
-            throw new RuntimeException("Unable to move {$source} to {$destination}.");
+            if (!@rename($backup, $destinationPath)) {
+                throw new RuntimeException(
+                    "Move failed and destination rollback also failed: {$destination}"
+                );
+            }
+            throw new RuntimeException("Unable to move {$source} to {$destination}; destination restored.");
+        }
+
+        if (!@unlink($backup)) {
+            throw new RuntimeException(
+                "Move completed but the destination backup could not be removed: {$backup}"
+            );
         }
     }
 
@@ -298,11 +328,16 @@ final class Filesystem
 
     private function applyPermissions(string $path, int $permissions): void
     {
-        if ($permissions < 0 || $permissions > 0777) {
-            throw new InvalidArgumentException('Permissions must be between 0000 and 0777.');
-        }
+        $this->validatePermissions($permissions);
         if (!@chmod($path, $permissions)) {
             throw new RuntimeException("Unable to change permissions: {$path}");
+        }
+    }
+
+    private function validatePermissions(int $permissions): void
+    {
+        if ($permissions < 0 || $permissions > 0777) {
+            throw new InvalidArgumentException('Permissions must be between 0000 and 0777.');
         }
     }
 }

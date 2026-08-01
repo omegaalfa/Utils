@@ -101,6 +101,20 @@ final class FilesystemTest extends TestCase
         self::assertSame('third', $this->filesystem->read('second.txt'));
     }
 
+    public function testRejectedOverwritePreservesDestination(): void
+    {
+        $this->filesystem->createDirectory('source-directory');
+        $this->filesystem->write('destination.txt', 'keep me');
+
+        try {
+            $this->filesystem->move('source-directory', 'destination.txt', overwrite: true);
+            self::fail('A directory must not overwrite a file destination.');
+        } catch (RuntimeException) {
+            self::assertSame('keep me', $this->filesystem->read('destination.txt'));
+            self::assertTrue($this->filesystem->exists('source-directory'));
+        }
+    }
+
     public function testFindsFilesDeterministically(): void
     {
         $this->filesystem->write('root.txt', '');
@@ -172,7 +186,17 @@ final class FilesystemTest extends TestCase
     {
         $this->filesystem->write('file.txt', 'data');
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->filesystem->changePermissions('file.txt', 01000);
+        foreach (['file.txt', 'new.txt'] as $path) {
+            try {
+                $path === 'file.txt'
+                    ? $this->filesystem->changePermissions($path, 01000)
+                    : $this->filesystem->write($path, 'must not be written', 01000);
+                self::fail('Invalid permissions should fail before mutation.');
+            } catch (InvalidArgumentException) {
+                self::addToAssertionCount(1);
+            }
+        }
+
+        self::assertFalse($this->filesystem->exists('new.txt'));
     }
 }

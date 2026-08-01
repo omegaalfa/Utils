@@ -2,30 +2,6 @@
 
 declare(strict_types=1);
 
-if (!function_exists('dd')) {
-    /**
-     * Dumps one or more values and terminates execution.
-     */
-    function dd(mixed ...$values): never
-    {
-        $isCli = PHP_SAPI === 'cli';
-
-        if (!$isCli) {
-            echo '<pre>';
-        }
-
-        foreach ($values as $value) {
-            var_dump($value);
-        }
-
-        if (!$isCli) {
-            echo '</pre>';
-        }
-
-        exit(1);
-    }
-}
-
 if (!function_exists('removerAcentos')) {
     /**
      * Transliterates common Latin characters and removes non-alphanumeric symbols.

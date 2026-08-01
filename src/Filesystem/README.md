@@ -47,6 +47,8 @@ A raiz é resolvida com `realpath()`. Entradas são normalizadas lexicalmente e 
 
 A escrita atômica cria um temporário no mesmo diretório, grava, aplica permissões e usa `rename()`. Isso reduz arquivos parcialmente escritos; a semântica final depende do filesystem.
 
+`write()` cria ou substitui o arquivo deliberadamente. Em `copy()` e `move()`, a substituição exige `overwrite: true`. O movimento preserva o destino em backup quando a plataforma não permite substituição atômica direta.
+
 ## Casos de uso
 
 ### Leitura e escrita
@@ -98,10 +100,10 @@ $filesystem->move(
 | `getRoot()` | `string` | Raiz canônica. |
 | `exists(string $path)` | `bool` | Inclui links simbólicos. |
 | `read(string $path)` | `string` | Exige arquivo legível dentro da raiz. |
-| `write(string $path, string $contents, int $permissions = 0644, bool $atomic = true)` | `void` | Cria pais e escreve atomicamente por padrão. |
+| `write(string $path, string $contents, int $permissions = 0644, bool $atomic = true)` | `void` | Cria pais e cria ou substitui atomicamente por padrão. |
 | `createDirectory(string $path, int $permissions = 0755, bool $recursive = true)` | `void` | Idempotente para diretório existente. |
 | `copy(string $source, string $destination, bool $overwrite = false)` | `void` | Não sobrescreve implicitamente. |
-| `move(...)` | `void` | Move dentro da raiz. |
+| `move(...)` | `void` | Overwrite tenta substituição atômica e usa backup com rollback como fallback. |
 | `delete(string $path)` | `void` | Arquivo/link; recusa diretórios. Ausência é idempotente. |
 | `files(string $directory = '.', bool $recursive = false)` | `list<string>` | Caminhos relativos ordenados. |
 | `size()`, `lastModified()`, `permissions()` | `int` | Metadados nativos. |

@@ -68,7 +68,7 @@ echo htmlspecialchars($name, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
 ### Início automático
 
-O construtor inicia a sessão por padrão. Use `autoStart: false` quando outro componente já controla `session_start()` ou em testes unitários de armazenamento.
+O construtor inicia a sessão por padrão. Use `autoStart: false` somente quando outro componente já controla `session_start()`. Todas as operações de dados exigem uma sessão ativa e falham explicitamente sem ela.
 
 ### Regeneração explícita
 
@@ -122,6 +122,8 @@ $session = new Session(autoStart: false);
 $session->set('request_id', 'req-123');
 ```
 
+Atrás de um proxy reverso confiável, informe `secure: true` explicitamente. O módulo não confia automaticamente em headers encaminhados, pois eles precisam de uma política de proxies confiáveis.
+
 ## Guia completo da API
 
 | API | Retorno | Comportamento e falhas |
@@ -130,14 +132,14 @@ $session->set('request_id', 'req-123');
 | `instance()` | `Session` | Singleton iniciado com opções padrão na primeira chamada. |
 | `start(array $cookieOptions = [])` | `void` | Idempotente se já ativa. Lança para sessões desabilitadas, headers enviados, opções inválidas ou falha nativa. |
 | `regenerate(bool $deleteOldSession = true)` | `void` | Exige sessão ativa e troca o ID. |
-| `set(string $key, mixed $value)` | `void` | Armazena sem conversão. Chave vazia é inválida. |
+| `set(string $key, mixed $value)` | `void` | Exige sessão ativa; armazena sem conversão. Chave vazia é inválida. |
 | `get(string $key, mixed $default = null)` | `mixed` | Distingue chave ausente de valor `null`. |
 | `has(string $key)` | `bool` | Usa `array_key_exists()`; `null` conta como existente. |
 | `delete(string $key)` | `void` | Remove uma chave. |
 | `pull(string $key, mixed $default = null)` | `mixed` | Obtém e remove a chave. |
 | `clear()` | `void` | Substitui `$_SESSION` por array vazio. |
 | `getAll()` / `all()` | `array` | Retornam todos os dados. |
-| `destroy()` | `void` | Limpa dados e destrói a sessão ativa; sem sessão ativa, apenas limpa. |
+| `destroy()` | `void` | Exige sessão ativa, expira o cookie quando usado, limpa dados e destrói a sessão. |
 
 ## Fluxo interno
 
@@ -201,12 +203,11 @@ Não há benchmark publicado. Operações de dados são acessos diretos a `$_SES
 | `Cannot start session after headers were sent` | Houve saída anterior | Inicie antes de HTML, echo ou BOM. |
 | `PHP sessions are disabled` | Configuração do PHP | Habilite sessions no ambiente. |
 | `SameSite=None requires a secure cookie` | Combinação rejeitada por browsers | Defina `secure: true` e use HTTPS. |
-| `No active PHP session` | `regenerate()` sem início | Chame `start()` ou use auto start. |
+| `No active PHP session` | Operação de dados ou lifecycle sem início | Chame `start()` ou use auto start. |
 | `Session key cannot be empty` | Chave vazia | Use uma chave estável e não vazia. |
 
 ## Oportunidades de melhoria
 
-- Expirar explicitamente o cookie no navegador durante `destroy()` encerraria também o identificador do lado cliente.
 - Um método `close()` baseado em `session_write_close()` reduziria lock em requisições longas.
 - Um factory configurável poderia substituir o singleton rígido e melhorar DX em containers.
 - Flash data pode ser útil, mas deve permanecer fora do núcleo até existir um contrato simples e testado.

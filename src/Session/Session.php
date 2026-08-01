@@ -67,6 +67,7 @@ final class Session
      */
     public function set(string $key, mixed $value): void
     {
+        $this->requireActive();
         $this->assertKey($key);
         $_SESSION[$key] = $value;
     }
@@ -78,6 +79,7 @@ final class Session
      */
     public function get(string $key, mixed $default = null): mixed
     {
+        $this->requireActive();
         $this->assertKey($key);
         return array_key_exists($key, $_SESSION ?? []) ? $_SESSION[$key] : $default;
     }
@@ -88,6 +90,7 @@ final class Session
      */
     public function has(string $key): bool
     {
+        $this->requireActive();
         $this->assertKey($key);
         return array_key_exists($key, $_SESSION ?? []);
     }
@@ -98,6 +101,7 @@ final class Session
      */
     public function delete(string $key): void
     {
+        $this->requireActive();
         $this->assertKey($key);
         unset($_SESSION[$key]);
     }
@@ -119,13 +123,15 @@ final class Session
      */
     public function clear(): void
     {
+        $this->requireActive();
         $_SESSION = [];
     }
 
     /** @return array<array-key, mixed> */
     public function getAll(): array
     {
-        return $_SESSION ?? [];
+        $this->requireActive();
+        return $_SESSION;
     }
 
     /** @return array<array-key, mixed> */
@@ -139,13 +145,38 @@ final class Session
      */
     public function destroy(): void
     {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            $this->clear();
-            return;
+        $this->requireActive();
+        $usesCookies = (bool) ini_get('session.use_cookies');
+
+        if ($usesCookies && headers_sent($file, $line)) {
+            throw new RuntimeException(
+                "Cannot destroy session cookie after headers were sent at {$file}:{$line}."
+            );
         }
+
+        $cookieDeleted = true;
+        if ($usesCookies) {
+            $params = session_get_cookie_params();
+            $name = session_name();
+            if ($name === false) {
+                throw new RuntimeException('Unable to determine the session cookie name.');
+            }
+            $cookieDeleted = setcookie($name, '', [
+                'expires' => time() - 42_000,
+                'path' => $params['path'],
+                'domain' => $params['domain'],
+                'secure' => $params['secure'],
+                'httponly' => $params['httponly'],
+                'samesite' => $params['samesite'],
+            ]);
+        }
+
         $this->clear();
         if (!session_destroy()) {
             throw new RuntimeException('Unable to destroy PHP session.');
+        }
+        if (!$cookieDeleted) {
+            throw new RuntimeException('Session was destroyed but its cookie could not be expired.');
         }
     }
 

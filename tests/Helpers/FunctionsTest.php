@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Helpers;
 
+require_once dirname(__DIR__, 2) . '/helpers/functions.php';
+
 use DateTimeImmutable;
 use DateTimeZone;
 use JsonException;

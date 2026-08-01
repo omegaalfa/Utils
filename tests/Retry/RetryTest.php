@@ -188,6 +188,7 @@ final class RetryTest extends TestCase
         $invalid = [
             static fn () => Retry::attempt(static fn () => null, attempts: 0),
             static fn () => Retry::attempt(static fn () => null, delayMilliseconds: -1),
+            static fn () => Retry::attempt(static fn () => null, delayMilliseconds: 2, maxDelayMilliseconds: 1),
             static fn () => Retry::attempt(static fn () => null, multiplier: 0.5),
             static fn () => Retry::attempt(static fn () => null, retryOn: []),
             static fn () => Retry::attempt(static fn () => null, retryOn: ['stdClass']),

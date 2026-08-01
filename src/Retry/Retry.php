@@ -64,10 +64,15 @@ final class Retry
                     usleep($sleep * 1_000);
                 }
 
-                $delay = min(
-                    $maxDelayMilliseconds,
-                    (int) ceil($delay * $multiplier),
-                );
+                if ($delay >= $maxDelayMilliseconds) {
+                    $delay = $maxDelayMilliseconds;
+                    continue;
+                }
+
+                $nextDelay = $delay * $multiplier;
+                $delay = $nextDelay >= $maxDelayMilliseconds
+                    ? $maxDelayMilliseconds
+                    : (int) ceil($nextDelay);
             }
         }
 
@@ -89,6 +94,9 @@ final class Retry
         }
         if ($delay < 0 || $maximumDelay < 0) {
             throw new InvalidArgumentException('Retry delays cannot be negative.');
+        }
+        if ($delay > $maximumDelay) {
+            throw new InvalidArgumentException('Initial delay cannot exceed the maximum delay.');
         }
         if ($multiplier < 1.0 || !is_finite($multiplier)) {
             throw new InvalidArgumentException('Retry multiplier must be finite and at least 1.0.');

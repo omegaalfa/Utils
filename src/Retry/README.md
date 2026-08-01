@@ -110,7 +110,7 @@ $result = Retry::attempt(
 | `retryOn` | `[Throwable::class]` | Classes elegíveis. |
 | `shouldRetry` | null | `callable(Throwable,int): bool`. |
 | `onFailure` | null | `callable(Throwable,int,bool): void`. |
-| `maxDelayMilliseconds` | 60000 | Teto do backoff. |
+| `maxDelayMilliseconds` | 60000 | Teto de todos os intervalos; deve ser maior ou igual ao delay inicial. |
 
 Retorna exatamente o retorno da callable. Quando encerra por falha, relança a mesma instância de exception.
 
@@ -144,6 +144,7 @@ O método é síncrono e bloqueia a thread durante delay. Não possui budget tot
 | Worker bloqueado | Reduza delay ou use solução async. |
 | Todos os erros repetem | Restrinja `retryOn`. |
 | Thundering herd | Ative jitter. |
+| Initial delay cannot exceed the maximum delay | Aumente o máximo ou reduza o delay inicial. |
 
 ## Oportunidades de melhoria
 

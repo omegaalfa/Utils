@@ -47,6 +47,7 @@ dist/
 
 # Arquivos de cobertura de testes
 coverage/
+/coverage.xml
 *.cov
 *.lcov
 

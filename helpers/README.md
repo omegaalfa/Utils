@@ -1,18 +1,18 @@
 # Helpers
 
-> Funções globais pequenas para texto, validação, JSON, tempo e depuração.
+> Funções globais opcionais para texto, validação, JSON e tempo.
 
 [← Portal do ecossistema](../README.md)
 
 ## Introdução
 
-Os helpers oferecem operações diretas para scripts que não justificam objetos dedicados. Eles são carregados automaticamente pelo Composer e protegidos por `function_exists()`.
+Os helpers oferecem operações diretas para scripts que não justificam objetos dedicados. Para evitar colisões globais, eles não são carregados automaticamente pelo Composer.
 
 Use-os quando nomes globais e contratos pequenos forem aceitáveis. Não os use como camada de validação de domínio, segurança SQL, serializador configurável, biblioteca Unicode completa ou substituto de componentes especializados.
 
 ## Principais recursos
 
-- ✅ carregamento automático;
+- ✅ carregamento explícito e opt-in;
 - ✅ proteção contra redeclaração;
 - ✅ tipos estritos;
 - ✅ normalização de texto sem extensão adicional;
@@ -29,7 +29,7 @@ Use-os quando nomes globais e contratos pequenos forem aceitáveis. Não os use 
 composer require omegaalfa/utils
 ```
 
-Após carregar `vendor/autoload.php`, todas as funções ficam disponíveis. Requer PHP 8.4+ e nenhuma extensão adicional.
+Depois do autoload, importe conscientemente o arquivo de helpers:
 
 ## Início rápido
 
@@ -39,6 +39,7 @@ Após carregar `vendor/autoload.php`, todas as funções ficam disponíveis. Req
 declare(strict_types=1);
 
 require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/vendor/omegaalfa/utils/helpers/functions.php';
 
 $slug = slugify('Olá, São Paulo!');
 $email = filter_validate_email('developer@example.com');
@@ -136,14 +137,6 @@ $utc = timestamp('UTC');
 // date_default_timezone_get() não é modificado.
 ```
 
-### Depuração
-
-```php
-dd($payload, $createdAt);
-```
-
-Em CLI usa `var_dump()` diretamente. Em ambiente não CLI, envolve a saída com `<pre>`. Sempre encerra com status 1.
-
 ## Guia completo da API
 
 ### Texto
@@ -163,14 +156,13 @@ Em CLI usa `var_dump()` diretamente. Em ambiente não CLI, envolve a saída com 
 | `filter_validate_email(string $email)` | `?string` | Remove espaços externos e valida; não corrige endereço inválido. |
 | `filter_validate_sql(string $identifier)` | `?string` | Aceita somente `[A-Za-z_][A-Za-z0-9_]*`; não aceita ponto, quoting ou SQL completo. |
 
-### JSON, tempo e debug
+### JSON e tempo
 
 | Função | Retorno | Exceptions |
 |---|---|---|
 | `arrayToJson(array $array, bool $throw = false)` | `?string` | Com `throw: true`, propaga `JsonException`; caso contrário retorna `null`. |
 | `jsonToArray(string $json, bool $throw = false)` | `?array` | Exige objeto ou array na raiz. Pode lançar `JsonException` ou `UnexpectedValueException`. |
 | `timestamp(string $timezone = 'America/Sao_Paulo')` | `string` | Formato `Y-m-d H:i:s`; timezone inválido gera exception nativa de `DateTimeZone`. |
-| `dd(mixed ...$values)` | `never` | Exibe valores e executa `exit(1)`. |
 
 ## Fluxo interno de JSON
 
@@ -200,7 +192,7 @@ Sem os helpers, scripts repetem regex, filtros e tratamento de erro JSON. Com el
 
 ## Performance
 
-Não há benchmark publicado. `jsonToArray()` usa uma passagem e evita exceptions no caminho padrão inválido. Regex e transliteração percorrem a entrada linearmente; a tabela de transliteração é uma constante da classe interna. `dd()` não deve existir em hot paths ou produção.
+Não há benchmark publicado. `jsonToArray()` usa uma passagem e evita exceptions no caminho padrão inválido. Regex e transliteração percorrem a entrada linearmente; a tabela de transliteração é uma constante da classe interna.
 
 ## Melhores práticas
 
@@ -209,7 +201,6 @@ Não há benchmark publicado. `jsonToArray()` usa uma passagem e evita exception
 - use prepared statements para valores;
 - use `jsonToArray(..., throw: true)` quando exceptions fizerem parte do fluxo;
 - escape texto no contexto de saída;
-- não use `dd()` em código publicado;
 - prefira classes namespaced se a aplicação não aceitar funções globais.
 
 ## FAQ
@@ -230,12 +221,12 @@ Não há benchmark publicado. `jsonToArray()` usa uma passagem e evita exception
 | `jsonToArray()` retorna null para string JSON | Raiz escalar | Use `json_decode()` se escalares forem válidos no domínio. |
 | Email internacional retorna null | Limites do `FILTER_VALIDATE_EMAIL` | Use validador especializado conforme requisito. |
 | Caracteres desaparecem no slug | Fora do mapa latino | Adote componente Unicode especializado. |
-| Processo termina em teste | `dd()` foi executado | Remova o debug ou teste em subprocesso. |
 
 ## Oportunidades de melhoria
 
 - Nomes totalmente em inglês e consistentes melhorariam DX em projetos internacionais, mas exigiriam estratégia de compatibilidade.
 - Funções namespaced reduziriam colisões globais.
+- Para dumps, use o módulo [Debug](../src/Debug/README.md), também opt-in.
 - Um helper `isJson()` só agregaria valor se documentasse claramente o uso isolado de `json_validate()`.
 - Transliteração Unicode completa exigiria `intl` ou dependência, contrariando o perfil atual.
 - Benchmarks de JSON e slug poderiam validar ganhos em cargas reais.

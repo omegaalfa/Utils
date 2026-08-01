@@ -23,11 +23,15 @@ final class SessionTest extends TestCase
 
     protected function tearDown(): void
     {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            $this->session->destroy();
+        }
         $_SESSION = [];
     }
 
     public function testStoresValuesWithoutChangingTheirTypesOrEscapingContent(): void
     {
+        $this->session->start();
         $values = [
             'html' => '<strong>safe at output</strong>',
             'array' => ['role' => 'admin'],
@@ -48,6 +52,7 @@ final class SessionTest extends TestCase
 
     public function testGetReturnsDefaultOnlyForMissingKeys(): void
     {
+        $this->session->start();
         $this->session->set('nullable', null);
 
         self::assertNull($this->session->get('nullable', 'fallback'));
@@ -57,6 +62,7 @@ final class SessionTest extends TestCase
 
     public function testDeletePullAndClear(): void
     {
+        $this->session->start();
         $this->session->set('first', 1);
         $this->session->set('second', 2);
 
@@ -74,6 +80,7 @@ final class SessionTest extends TestCase
 
     public function testRejectsEmptyKeys(): void
     {
+        $this->session->start();
         $this->expectException(InvalidArgumentException::class);
         $this->session->set('', 'value');
     }
@@ -85,12 +92,11 @@ final class SessionTest extends TestCase
         $this->session->regenerate();
     }
 
-    public function testDestroyWithoutActiveSessionStillClearsData(): void
+    public function testDataOperationsRequireActiveSession(): void
     {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('No active PHP session');
         $this->session->set('key', 'value');
-        $this->session->destroy();
-
-        self::assertSame([], $this->session->all());
     }
 
     #[RunInSeparateProcess]
