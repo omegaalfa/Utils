@@ -1,0 +1,52 @@
+{
+  "name": "omegaalfa/utils",
+  "description": "A lightweight, zero-dependency PHP utility package designed to provide essential helper functions for small scripts, microservices, and CLI applications.",
+  "license": "MIT",
+  "keywords": [
+    ".env",
+    "configuration",
+    "environment",
+    "env-loader",
+    "utilities"
+  ],
+  "authors": [
+    {
+      "name": "wrt",
+      "email": "webdesenvolver.agenda@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "Omegaalfa\\Utils\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "require-dev": {
+    "roave/security-advisories": "dev-latest",
+    "phpunit/phpunit": "^11.0 || ^12.0",
+    "phpstan/phpstan": "^2.0"
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit",
+    "test:unit": "vendor/bin/phpunit --testsuite unit",
+    "test:coverage": "vendor/bin/phpunit --coverage-html coverage",
+    "analyse": "vendor/bin/phpstan analyse --no-progress --level=max src tests",
+    "check": [
+      "@analyse",
+      "@test"
+    ]
+  },
+  "config": {
+    "sort-packages": true,
+    "optimize-autoloader": true
+  }
+}

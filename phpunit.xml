@@ -8,7 +8,7 @@
          failOnRisky="false"
 >
     <testsuites>
-        <testsuite name="Unit">
+        <testsuite name="unit">
             <directory>tests</directory>
         </testsuite>
     </testsuites>

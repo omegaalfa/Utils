@@ -1,25 +1,27 @@
-name: 🧪 CI
+name: Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
 
 jobs:
   test:
+    name: PHP 8.4
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v6
 
-      - uses: shivammathur/setup-php@v2
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
           coverage: xdebug
 
-      # 👇 mover o cache aqui garante que o Composer use PHP 8.4
-      - name: 📦 Cache Composer packages
-        id: composer-cache
+      - name: Cache Composer packages
         uses: actions/cache@v5
         with:
           path: vendor
@@ -30,11 +32,11 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: Static analysis
-        run: vendor/bin/phpstan analyse src --level=4
+      - name: Validate package
+        run: composer validate --strict
 
-      - name: Unit tests
-        run: vendor/bin/phpunit --coverage-text
+      - name: Quality checks
+        run: composer check
 
-      - name: Composer audit
+      - name: Security audit
         run: composer audit
