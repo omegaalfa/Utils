@@ -17,6 +17,7 @@
     <source>
         <include>
             <directory suffix=".php">src</directory>
+            <directory suffix=".php">helpers</directory>
         </include>
     </source>
 

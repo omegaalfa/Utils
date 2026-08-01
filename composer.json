@@ -16,12 +16,17 @@
     }
   ],
   "require": {
-    "php": ">=8.4"
+    "php": ">=8.4",
+    "ext-intl": "*",
+    "ext-mbstring": "*"
   },
   "autoload": {
     "psr-4": {
       "Omegaalfa\\Utils\\": "src/"
-    }
+    },
+    "files": [
+      "helpers/functions.php"
+    ]
   },
   "autoload-dev": {
     "psr-4": {
@@ -39,7 +44,7 @@
     "test": "vendor/bin/phpunit",
     "test:unit": "vendor/bin/phpunit --testsuite unit",
     "test:coverage": "vendor/bin/phpunit --coverage-html coverage",
-    "analyse": "vendor/bin/phpstan analyse --no-progress --level=max src tests",
+    "analyse": "vendor/bin/phpstan analyse --no-progress --level=max src helpers tests",
     "check": [
       "@analyse",
       "@test"

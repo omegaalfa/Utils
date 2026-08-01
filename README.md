@@ -2,143 +2,114 @@
 
 # Omegaalfa Utils
 
-**Utilitários PHP pequenos, seguros e sem dependências para scripts, CLIs e microsserviços.**
+**Utilitários PHP pequenos, tipados e sem dependências de runtime.**
 
 [![PHP](https://img.shields.io/badge/PHP-%E2%89%A58.4-777BB4?logo=php&logoColor=white)](https://www.php.net/)
 [![Tests](https://github.com/omegaalfa/Utils/actions/workflows/ci.yaml/badge.svg)](https://github.com/omegaalfa/Utils/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/badge/license-MIT-22C55E.svg)](LICENSE)
-[![Zero dependencies](https://img.shields.io/badge/runtime_dependencies-0-0EA5E9.svg)](composer.json)
+[![Runtime dependencies](https://img.shields.io/badge/runtime_dependencies-0-0EA5E9.svg)](composer.json)
 
-[Instalação](#instalação) · [Uso rápido](#uso-rápido) · [API](#api) · [Segurança](#segurança) · [Contribuição](#contribuição)
+Um ecossistema modular para scripts, aplicações CLI e microsserviços.
 
 </div>
 
-## Por que usar?
+## Visão geral
 
-O **Omegaalfa Utils** reúne helpers focados e previsíveis sem adicionar frameworks ou dependências à sua aplicação. Cada módulo possui uma responsabilidade clara e pode ser usado isoladamente.
+O Omegaalfa Utils reúne componentes independentes para problemas recorrentes de infraestrutura PHP. O projeto prioriza APIs pequenas, comportamento explícito e baixo custo de adoção.
 
-- **Leve:** nenhuma dependência em produção.
-- **Moderno:** PHP 8.4+, tipos estritos e autoload PSR-4.
-- **Seguro por padrão:** não sobrescreve variáveis existentes e valida entradas.
-- **Confiável:** testes automatizados e análise estática no nível máximo.
-- **Evolutivo:** estrutura modular pronta para receber novos pacotes utilitários.
+Cada módulo possui responsabilidade e documentação próprias. Você pode usar somente as APIs necessárias; nenhum framework, container ou ciclo de vida global é imposto pelo pacote.
 
 ## Instalação
+
+Todos os módulos são distribuídos atualmente pelo mesmo pacote Composer:
 
 ```bash
 composer require omegaalfa/utils
 ```
 
-## Uso rápido
+Requisitos:
 
-Crie um arquivo `.env` na raiz da aplicação:
-
-```dotenv
-APP_ENV=production
-APP_DEBUG=false
-HTTP_PORT=8080
-APP_NAME="Minha aplicação"
-```
-
-Carregue e consulte os valores:
-
-```php
-<?php
-
-declare(strict_types=1);
-
-require __DIR__ . '/vendor/autoload.php';
-
-use Omegaalfa\Utils\EnvLoader\EnvLoader;
-
-EnvLoader::load(__DIR__, required: true);
-
-$environment = EnvLoader::require('APP_ENV');
-$debug = EnvLoader::getBool('APP_DEBUG', false);
-$port = EnvLoader::getInt('HTTP_PORT', 8080);
-$name = EnvLoader::get('APP_NAME', 'Aplicação');
-```
-
-O caminho pode apontar diretamente para um arquivo ou para um diretório que contenha `.env`. Sem argumento, `load()` procura `.env` no diretório de execução atual.
-
-## EnvLoader
-
-O loader reconhece linhas vazias, comentários, prefixo `export`, comentários inline e valores entre aspas simples ou duplas:
-
-```dotenv
-# Comentário
-export APP_ENV=production
-APP_NAME="Omega Utils" # comentário inline
-LITERAL='conteúdo literal'
-EMPTY=
-```
-
-### API
-
-| Método | Descrição |
+| Requisito | Versão |
 |---|---|
-| `load(?string $path = null, bool $required = false, bool $overwrite = false, bool $strictPermissions = false): void` | Lê e aplica um arquivo de ambiente. |
-| `has(string $key): bool` | Informa se a variável existe. |
-| `get(string $key, ?string $default = null): ?string` | Retorna uma string ou o valor padrão. |
-| `require(string $key): string` | Retorna um valor obrigatório ou lança uma exceção. |
-| `getInt(string $key, ?int $default = null): ?int` | Valida e retorna um inteiro. |
-| `getBool(string $key, ?bool $default = null): ?bool` | Aceita `1`, `true`, `yes`, `on`, `0`, `false`, `no` e `off`. |
+| PHP | 8.4 ou superior |
+| Extensões obrigatórias adicionais | intl e mbstring |
+| Dependências de runtime | Nenhuma |
+| Autoload | PSR-4 + arquivo de helpers |
 
-Por padrão, valores já definidos em `$_ENV`, `$_SERVER` ou no ambiente do processo são preservados. Para substituí-los explicitamente:
+## Módulos
 
-```php
-EnvLoader::load(__DIR__ . '/.env.testing', overwrite: true);
+| Módulo | Responsabilidade | Use quando | Documentação |
+|---|---|---|---|
+| EnvLoader | Ler configuração de arquivos `.env` confiáveis | Scripts, CLIs e desenvolvimento local precisam carregar variáveis | [Guia do EnvLoader](src/EnvLoader/README.md) |
+| Stream | Encapsular resources nativos com leitura incremental | Você precisa manipular arquivos, memória, linhas ou CSV sem carregar tudo | [Guia de Stream](src/Stream/README.md) |
+| Session | Gerenciar a sessão nativa preservando tipos | Uma aplicação HTTP pequena precisa de uma API previsível sobre `$_SESSION` | [Guia de Session](src/Session/README.md) |
+| Fibers | Agendar tarefas cooperativas em round-robin | Tarefas em uma thread precisam ceder controle explicitamente | [Guia de Fibers](src/Fibers/README.md) |
+| Helpers | Operações globais pequenas de texto, JSON, validação e debug | Um script precisa de funções diretas sem instanciar objetos | [Guia de Helpers](helpers/README.md) |
+| String Utils | Operações estáticas otimizadas de string | Você precisa de consultas, slug, truncamento, random ou máscara | [Guia de String Utils](src/Str/README.md) |
+| Lock | Exclusão mútua entre processos locais | Uma operação não pode executar simultaneamente | [Guia de Lock](src/Lock/README.md) |
+| Profiler | Tempo, memória, chamadas e etapas | Você precisa localizar gargalos com dados reais | [Guia de Profiler](src/Profiler/README.md) |
+| Filesystem | Arquivos e diretórios com raiz isolada e operações previsíveis | Você precisa controlar caminhos, escrita, cópia, movimentação ou streams | [Guia de Filesystem](src/Filesystem/README.md) |
+| UUID e ULID | Identificadores únicos e ordenáveis por tempo | Você precisa gerar IDs sem depender do banco de dados | [Guia de UUID e ULID](src/Identifier/README.md) |
+| Retry | Repetição controlada de operações temporariamente instáveis | APIs, bancos ou filas podem falhar de forma transitória | [Guia de Retry](src/Retry/README.md) |
+| CLI | Comandos, argumentos, opções e saída de terminal | Você precisa estruturar ferramentas de linha de comando pequenas | [Guia de CLI](src/Cli/README.md) |
+| DTO | Objetos imutáveis e tipados para transporte de dados | Arrays sem contrato precisam virar dados previsíveis entre camadas | [Guia de DTO](src/Dto/README.md) |
+
+## Escolha rápida
+
+```mermaid
+flowchart TD
+    A[Qual problema preciso resolver?]
+    A -->|Configuração .env| B[EnvLoader]
+    A -->|I/O incremental| C[Stream]
+    A -->|Estado HTTP por usuário| D[Session]
+    A -->|Cooperação entre tarefas| E[FiberScheduler]
+    A -->|Transformação pequena| F[Helpers]
+    A -->|String otimizada| G[Str]
+    A -->|Evitar execução simultânea| H[Lock]
+    A -->|Localizar gargalos| I[Profiler]
+    A -->|Operar arquivos com segurança| J[Filesystem]
+    A -->|Gerar identificadores| K[UUID e ULID]
+    A -->|Repetir falhas temporárias| L[Retry]
+    A -->|Criar comandos| M[CLI]
+    A -->|Transportar dados tipados| N[DTO]
 ```
 
-## Segurança
+> [!IMPORTANT]
+> Os módulos são independentes em responsabilidade, mas ainda não são pacotes Composer separados. Instale `omegaalfa/utils` e importe apenas as APIs desejadas.
 
-Arquivos `.env` são indicados para desenvolvimento e ambientes controlados. Em produção, prefira variáveis fornecidas pelo gerenciador de processos ou por um serviço de secrets.
+## Princípios do ecossistema
 
-O loader:
-
-- rejeita nomes de variável inválidos, bytes NUL e sintaxe malformada;
-- limita arquivos a 1 MiB;
-- usa leitura com lock compartilhado;
-- nunca sobrescreve valores existentes sem autorização explícita;
-- pode exigir permissões Unix restritas (`0600`).
-
-```php
-EnvLoader::load('/secure/path/.env', required: true, strictPermissions: true);
-```
-
-> `strictPermissions` é ignorado no Windows, onde o modelo de permissões Unix não se aplica.
-
-## Tratamento de erros
-
-- `InvalidArgumentException`: chave, valor tipado ou sintaxe inválida.
-- `RuntimeException`: arquivo ausente quando obrigatório, inacessível ou inseguro; variável obrigatória ausente.
-
-```php
-try {
-    EnvLoader::load(__DIR__, required: true);
-    $token = EnvLoader::require('API_TOKEN');
-} catch (InvalidArgumentException | RuntimeException $exception) {
-    fwrite(STDERR, $exception->getMessage() . PHP_EOL);
-    exit(1);
-}
-```
+- zero dependências em produção;
+- tipos estritos e PHP moderno;
+- namespaces PSR-4 sob `Omegaalfa\Utils`;
+- falhas explícitas por exceptions;
+- processamento incremental quando aplicável;
+- ausência de integração obrigatória com frameworks;
+- testes automatizados e PHPStan no nível máximo.
 
 ## Desenvolvimento
 
 ```bash
 composer install
-composer test
-composer analyse
 composer check
 composer test:coverage
+composer audit
 ```
 
-Novos módulos devem permanecer independentes, ter uma API pequena, tipos estritos, documentação e cobertura de testes. Essa regra mantém o pacote útil sem transformá-lo em um framework genérico.
+`composer check` executa análise estática e testes. Mudanças de comportamento devem incluir testes e atualização do README do módulo afetado.
 
 ## Contribuição
 
-Contribuições são bem-vindas. Abra uma issue para discutir mudanças maiores e envie um pull request acompanhado de testes para qualquer comportamento novo ou corrigido.
+Antes de propor um novo módulo, confirme que ele:
+
+1. resolve uma responsabilidade pequena e bem definida;
+2. não duplica uma solução nativa simples sem ganho claro;
+3. não introduz dependência de runtime sem justificativa;
+4. possui contratos tipados, testes e documentação independente;
+5. não mistura responsabilidades de outro módulo.
+
+Abra uma issue para discutir alterações amplas. Pull requests devem passar por `composer check` e `composer audit`.
 
 ## Licença
 
-Distribuído sob a licença [MIT](LICENSE).
+Distribuído sob a [licença MIT](LICENSE).
