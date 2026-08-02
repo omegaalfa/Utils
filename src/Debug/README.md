@@ -16,6 +16,9 @@ Use durante desenvolvimento e diagnóstico local. Remova chamadas que encerram o
 - ✅ `Debug::ss()` preserva o atalho curto;
 - ✅ `Debug::dd()` exibe e encerra com status 1;
 - ✅ múltiplos valores e tipos nativos;
+- ✅ cores ANSI automáticas em terminais interativos;
+- ✅ saída HTML estilizada no navegador;
+- ✅ suporte ao padrão `NO_COLOR`;
 - ✅ apresentação `<pre>` fora de CLI;
 - ✅ aliases globais opcionais `dump_debug()`, `ss()` e `dd()`;
 - ✅ zero dependências;
@@ -59,7 +62,16 @@ O arquivo opcional usa `function_exists()` para não redeclarar funções existe
 
 ## Segurança e performance
 
-O módulo delega a `var_dump()` e adiciona apenas o wrapper visual em ambiente não CLI. Não faça dump de senhas, tokens, cookies, dados pessoais ou payloads extensos. Dumps podem expor informações e consumir memória proporcional ao valor inspecionado.
+O módulo delega a `var_dump()` e colore somente cabeçalhos, sem analisar ou copiar a estrutura completa do dump. Em CLI, ANSI é habilitado apenas quando `STDOUT` é um terminal interativo. Pipes, arquivos e logs permanecem limpos.
+
+Use `NO_COLOR=1` para desabilitar cores ou `OMEGA_DEBUG_COLORS=1` para forçá-las em uma ferramenta CLI:
+
+```bash
+NO_COLOR=1 php console.php
+OMEGA_DEBUG_COLORS=1 php console.php
+```
+
+No navegador, o conteúdo é envolvido por um bloco `<pre>` estilizado. Não faça dump de senhas, tokens, cookies, dados pessoais ou payloads extensos. Dumps podem expor informações e consumir memória proporcional ao valor inspecionado.
 
 ## Boas práticas
 
@@ -67,7 +79,8 @@ O módulo delega a `var_dump()` e adiciona apenas o wrapper visual em ambiente n
 - use `dd()` somente quando interromper a execução for intencional;
 - não deixe dumps em commits de produção;
 - não habilite os aliases globais em bibliotecas reutilizáveis;
-- aplique redaction antes de inspecionar dados sensíveis.
+- aplique redaction antes de inspecionar dados sensíveis;
+- defina `NO_COLOR` em ambientes que não aceitam ANSI.
 
 ## FAQ
 
