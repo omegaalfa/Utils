@@ -17,7 +17,6 @@
   ],
   "require": {
     "php": ">=8.4",
-    "ext-intl": "*",
     "ext-mbstring": "*"
   },
   "autoload": {
