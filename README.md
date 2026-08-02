@@ -46,6 +46,9 @@ Requisitos:
 | Fibers | Agendar tarefas cooperativas em round-robin | Tarefas em uma thread precisam ceder controle explicitamente | [Guia de Fibers](src/Fibers/README.md) |
 | Helpers | Funções opcionais de texto, JSON e validação | Um script aceita importar explicitamente funções globais | [Guia de Helpers](helpers/README.md) |
 | Debug | Dump tipado com atalhos globais opcionais | Você precisa inspecionar valores durante o desenvolvimento | [Guia de Debug](src/Debug/README.md) |
+| Clock | Tempo atual injetável e determinístico | Regras temporais precisam ser testadas sem depender do relógio real | [Guia de Clock](src/Clock/README.md) |
+| LazyObject | Fachada tipada sobre lazy objects nativos | Construção ou hidratação cara deve ocorrer somente no primeiro uso | [Guia de LazyObject](src/LazyObject/README.md) |
+| ScriptRunner | Descobrir e executar scripts PHP por menu seguro | Rotinas locais precisam de navegação, isolamento e captura de resultado | [Guia de ScriptRunner](src/ScriptRunner/README.md) |
 | String Utils | Operações estáticas otimizadas de string | Você precisa de consultas, slug, truncamento, random ou máscara | [Guia de String Utils](src/Str/README.md) |
 | Lock | Exclusão mútua entre processos locais | Uma operação não pode executar simultaneamente | [Guia de Lock](src/Lock/README.md) |
 | Profiler | Tempo, memória, chamadas e etapas | Você precisa localizar gargalos com dados reais | [Guia de Profiler](src/Profiler/README.md) |
@@ -74,6 +77,9 @@ flowchart TD
     A -->|Criar comandos| M[CLI]
     A -->|Transportar dados tipados| N[DTO]
     A -->|Inspecionar valores| O[Debug]
+    A -->|Controlar o tempo em testes| P[Clock]
+    A -->|Adiar construção de objetos| Q[LazyObject]
+    A -->|Executar scripts por menu| R[ScriptRunner]
 ```
 
 > [!IMPORTANT]

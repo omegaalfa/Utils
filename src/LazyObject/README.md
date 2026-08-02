@@ -1,0 +1,383 @@
+<div align="center">
+
+# ⚡ Lazy Object
+
+### Uma fachada pequena, tipada e fiel aos lazy objects nativos do PHP 8.4
+
+[![PHP 8.4+](https://img.shields.io/badge/PHP-8.4%2B-777BB4?logo=php&logoColor=white)](https://www.php.net/releases/8.4/)
+[![CI](https://github.com/omegaalfa/Utils/actions/workflows/ci.yaml/badge.svg)](https://github.com/omegaalfa/Utils/actions/workflows/ci.yaml)
+[![PHPStan max](https://img.shields.io/badge/PHPStan-max-4F5B93)](https://phpstan.org/)
+[![License MIT](https://img.shields.io/badge/license-MIT-green.svg)](../../LICENSE)
+
+</div>
+
+[← Portal do Omegaalfa Utils](../../README.md)
+
+> [!TIP]
+> Use a API moderna `LazyObject::proxy()` e `LazyObject::ghost()` sem criar uma implementação paralela das regras do PHP.
+
+O módulo não implementa proxies próprios, não substitui regras do engine, não oferece compatibilidade artificial e não converte indiscriminadamente erros nativos.
+
+## 📋 Requisitos
+
+- PHP 8.4 ou superior;
+- Composer.
+
+## 📦 Instalação
+
+```bash
+composer require omegaalfa/utils
+```
+
+## API pública
+
+| Método | Retorno | Responsabilidade |
+|---|---|---|
+| `LazyObject::proxy(string|object $class, Closure $factory, int $options = 0)` | objeto do tipo solicitado | Cria um proxy lazy nativo e delega as regras de compatibilidade ao PHP. |
+| `LazyObject::ghost(string|object $class, Closure $initializer, int $options = 0)` | objeto do tipo solicitado | Cria um ghost lazy nativo inicializado in-place. |
+
+A classe não pode ser instanciada. O objeto aceito em `$class` serve somente para determinar o tipo; ele não é reutilizado.
+
+## Escopo e limites
+
+- somente uma fachada sobre `ReflectionClass::newLazyProxy()` e `newLazyGhost()`;
+- sem proxy próprio, container, autowiring ou geração de código;
+- sem fallback para versões anteriores ao PHP 8.4;
+- sem garantia de que toda classe aceita por Reflection possa ser lazy;
+- erros de compatibilidade e opções continuam sendo definidos pelo engine.
+
+## 🆚 Proxy ou ghost?
+
+| 🔍 Característica | 🔀 Proxy | 👻 Ghost |
+|---|---|---|
+| 📞 Callback | `Closure(T): object` | `Closure(T): void` |
+| ⚙️ Inicialização | A factory fornece outra instância | O initializer configura o próprio objeto |
+| 🪪 Identidade | O proxy mantém identidade própria e delega para uma instância real | O próprio objeto é inicializado in-place |
+| 🎯 Uso típico | Factory, container ou criação delegada | Hidratação ou inicialização in-place |
+
+### 🔀 Quando usar um proxy
+
+O proxy é um objeto lazy que, no primeiro acesso que exige inicialização, chama uma **factory**. Essa factory cria e retorna outra instância, chamada de instância real. Depois disso, as operações feitas no proxy são delegadas para ela.
+
+```text
+Proxy criado → primeiro acesso → factory executada → instância real criada → operações delegadas
+```
+
+✅ **Cenários recomendados:**
+
+- criação controlada por um container de dependências;
+- serviços cuja construção precisa ser totalmente delegada;
+- conexões, clientes HTTP, mailers e gateways caros;
+- factories que podem escolher dinamicamente a implementação real;
+- integração com componentes que já sabem construir o serviço completo;
+- quando é importante separar o objeto exposto da instância que executa o trabalho.
+
+⚠️ **Considere as seguintes características:**
+
+- o proxy e a instância real têm identidades diferentes;
+- a factory precisa retornar um objeto aceito pelas regras nativas do PHP;
+- retornar o próprio proxy ou um objeto incompatível é rejeitado pelo engine;
+- proxy e ghost possuem custos diferentes definidos pelo engine; meça no cenário real;
+- regras de herança entre proxy e instância real são verificadas pelo PHP.
+
+### 👻 Quando usar um ghost
+
+O ghost é criado sem executar o construtor. No primeiro acesso que exige inicialização, o **initializer configura o próprio objeto in-place**, atribuindo propriedades ou chamando seu construtor.
+
+```text
+Ghost criado → primeiro acesso → initializer executado → mesmo objeto inicializado
+```
+
+✅ **Cenários recomendados:**
+
+- hidratação tardia de entidades e modelos;
+- carregamento sob demanda a partir de banco de dados ou armazenamento;
+- objetos cuja identidade precisa permanecer a mesma;
+- inicialização tardia por atribuição de propriedades;
+- classes cujo construtor pode ser chamado pelo initializer;
+- objetos de domínio que devem ser preenchidos in-place.
+
+⚠️ **Considere as seguintes características:**
+
+- o initializer não cria nem retorna uma instância substituta;
+- o retorno esperado é `void`;
+- o próprio ghost recebe o estado inicializado;
+- o initializer precisa deixar o objeto em um estado válido;
+- classes sem propriedades de instância podem não permanecer lazy.
+
+### 🧭 Guia rápido de decisão
+
+| Se você precisa de... | Escolha |
+|---|:---:|
+| 🏭 Delegar a criação completa para uma factory | **Proxy** |
+| 📦 Resolver o serviço por um container | **Proxy** |
+| 🔀 Escolher a instância real dinamicamente | **Proxy** |
+| 🪪 Preservar a identidade do objeto | **Ghost** |
+| 💧 Hidratar propriedades posteriormente | **Ghost** |
+| 🧱 Executar o construtor no próprio objeto lazy | **Ghost** |
+| 🗄️ Carregar uma entidade sob demanda | **Ghost** |
+
+> [!TIP]
+> Se a callback deve **retornar outro objeto**, use um **proxy**. Se a callback deve **configurar o objeto recebido**, use um **ghost**.
+
+### 🔬 Diferenças de identidade
+
+```php
+$proxy = LazyObject::proxy(
+    Service::class,
+    static fn (Service $_proxy): object => new Service('real'),
+);
+// O proxy mantém sua identidade e delega para outra instância.
+
+$ghost = LazyObject::ghost(
+    Service::class,
+    static fn (Service $ghost): void => $ghost->__construct('in-place'),
+);
+// O próprio $ghost é inicializado; sua identidade é preservada.
+```
+
+### ⏱️ O que ambos têm em comum
+
+Proxy e ghost compartilham o ciclo de vida básico oferecido pelo PHP:
+
+- são criados sem executar imediatamente a callback;
+- inicializam quando uma operação observa ou modifica seu estado;
+- executam a callback somente uma vez após uma inicialização bem-sucedida;
+- restauram o estado lazy quando a callback lança uma exceção;
+- normalmente inicializam antes de clonagem ou serialização;
+- continuam sendo `instanceof` da classe solicitada;
+- dependem das regras nativas de lazy objects do PHP 8.4.
+## 🚀 Exemplos
+
+### 1. 🔀 Lazy proxy completo
+
+```php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/vendor/autoload.php';
+
+use Omegaalfa\Utils\LazyObject\LazyObject;
+
+final class DatabaseConnection
+{
+    public function __construct(public string $dsn)
+    {
+        echo "Conexão aberta\n";
+    }
+}
+
+$connection = LazyObject::proxy(
+    DatabaseConnection::class,
+    static fn (DatabaseConnection $_proxy): object =>
+        new DatabaseConnection('mysql:host=localhost;dbname=app'),
+);
+
+echo "Proxy criado\n";
+echo $connection->dsn; // Executa a factory.
+```
+
+> [!NOTE]
+> A factory recebe obrigatoriamente o proxy, mesmo quando não precisa utilizá-lo, e retorna a instância real. `Closure(T): object` é intencional: o engine aceita a mesma classe e certos casos de superclasse compatível. A biblioteca não duplica essas regras complexas. No PHP 8.4, retornar uma subclasse para um proxy da classe pai é rejeitado pelo engine.
+
+### 2. 📦 Proxy criado por container
+
+Considerando um container PSR-11 disponível em `$container`:
+
+```php
+/** @var Psr\Container\ContainerInterface $container */
+$mailer = LazyObject::proxy(
+    Mailer::class,
+    static fn (Mailer $_proxy): object => $container->get(Mailer::class),
+);
+```
+
+### 3. ⏳ Serviço caro usado condicionalmente
+
+```php
+$reports = LazyObject::proxy(
+    ReportGenerator::class,
+    static fn (ReportGenerator $_proxy): object => new ReportGenerator(loadTemplates()),
+);
+
+if ($request->wantsReport()) {
+    echo $reports->generate();
+}
+```
+
+### 4. 👻 Lazy ghost completo
+
+```php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/vendor/autoload.php';
+
+use Omegaalfa\Utils\LazyObject\LazyObject;
+
+final class UserProfile
+{
+    public function __construct(public int $id, public string $name) {}
+}
+
+$profile = LazyObject::ghost(
+    UserProfile::class,
+    static function (UserProfile $profile): void {
+        $profile->__construct(42, 'Ada');
+    },
+);
+
+echo $profile->name; // Executa o initializer.
+```
+
+### 5. 💧 Ghost hidratando propriedades
+
+```php
+$invoice = LazyObject::ghost(
+    Invoice::class,
+    static function (Invoice $invoice): void {
+        $row = fetchInvoice(100);
+        $invoice->id = $row['id'];
+        $invoice->total = $row['total'];
+    },
+);
+```
+
+### 6. 🏷️ Nome da classe ou objeto
+
+```php
+$fromClassName = LazyObject::ghost(
+    Service::class,
+    static fn (Service $service): void => $service->__construct('class-string'),
+);
+
+$typeExample = new Service('apenas informa o tipo');
+$fromObject = LazyObject::ghost(
+    $typeExample,
+    static fn (Service $service): void => $service->__construct('novo objeto'),
+);
+
+var_dump($fromObject !== $typeExample); // true
+```
+
+A instância passada em `$class` serve para resolver o tipo. Ela não é reaproveitada como ghost nem como instância real do proxy.
+
+### 7. 🔁 Exceção e nova tentativa
+
+```php
+$attempts = 0;
+$service = LazyObject::ghost(
+    Service::class,
+    static function (Service $service) use (&$attempts): void {
+        if (++$attempts === 1) {
+            throw new RuntimeException('Falha temporária');
+        }
+        $service->__construct('recuperado');
+    },
+);
+
+try {
+    echo $service->value;
+} catch (RuntimeException) {
+    echo $service->value; // O estado lazy foi restaurado; tenta novamente.
+}
+```
+
+### 8. 💾 Evitar inicialização na serialização
+
+```php
+$service = LazyObject::ghost(
+    Service::class,
+    static fn (Service $service): void => $service->__construct('carregado'),
+    \ReflectionClass::SKIP_INITIALIZATION_ON_SERIALIZE,
+);
+
+$payload = serialize($service); // O initializer não é executado.
+```
+
+> [!IMPORTANT]
+> `SKIP_INITIALIZATION_ON_SERIALIZE` é a opção disponível para `newLazyProxy()` e `newLazyGhost()`. Não use `SKIP_DESTRUCTOR`: essa flag pertence aos métodos `resetAsLazyProxy()` e `resetAsLazyGhost()` e é rejeitada aqui.
+
+### 9. 🧬 Clonagem
+
+```php
+$service = LazyObject::ghost(
+    Service::class,
+    static fn (Service $service): void => $service->__construct('original'),
+);
+
+$clone = clone $service; // Inicializa antes de clonar.
+$clone->value = 'clone';
+```
+
+### 10. 🔎 Inspeção explícita
+
+```php
+$reflection = new \ReflectionClass($service);
+
+if ($reflection->isUninitializedLazyObject($service)) {
+    $reflection->initializeLazyObject($service);
+}
+```
+
+## 🪶 Classes sem propriedades
+
+Classes sem propriedades de instância — ou somente com propriedades estáticas ou virtuais — podem resultar em um objeto normal. Quando o engine retorna uma instância normal nesses casos, a callback não é executada. Consumidores não devem presumir que todo retorno esteja necessariamente lazy e não inicializado.
+
+```php
+$reflection = new \ReflectionClass($object);
+var_dump($reflection->isUninitializedLazyObject($object));
+```
+
+> [!NOTE]
+> No PHP 8.4, `stdClass` e classes de usuário sem propriedades de instância podem resultar em objetos normais.
+
+## ⚠️ Exceções
+
+A biblioteca lança `InvalidArgumentException` para:
+
+- classe inexistente (preservando `ReflectionException` como exceção anterior);
+- interface;
+- trait;
+- enum;
+- classe abstrata.
+
+As validações restantes são delegadas ao PHP. A biblioteca não converte erros do engine relacionados a classes internas incompatíveis, descendentes de classes internas, factory incompatível, retorno do próprio proxy ou outras regras nativas.
+
+> [!WARNING]
+> No PHP 8.4, classes ou factories incompatíveis podem resultar em `Error`/`TypeError`, enquanto uma opção inválida pode resultar em `ReflectionException`. Esses tipos são propagados sem conversão.
+
+## ⚡ Cache de `ReflectionClass`
+
+O módulo mantém um cache interno de `ReflectionClass` por nome de classe. A presença de uma reflexão no cache significa apenas que a classe foi refletida e passou pelas verificações estruturais locais. A compatibilidade completa com lazy objects, incluindo herança de classes internas, opções e compatibilidade entre proxy e instância real, continua sendo validada pelo engine do PHP em cada chamada.
+
+O cache permanece durante todo o processo e não possui API pública de controle. Em workers persistentes, seu tamanho cresce conforme a quantidade de classes distintas consultadas. Não há benchmark publicado; meça o impacto no ambiente de destino antes de atribuir ganho de performance ao cache.
+
+## 🎯 Gatilhos de inicialização
+
+Operações sobre propriedades, como leitura, escrita, `isset()`, `unset()` e determinadas operações via Reflection, podem disparar a inicialização conforme as regras nativas do PHP. Clonagem e serialização inicializam por padrão, salvo quando uma opção nativa aplicável altera esse comportamento. Uma chamada de método pode não inicializar quando o método não observa nem modifica o estado.
+
+## 🛠️ Desenvolvimento
+
+```bash
+composer install
+composer check
+composer test:coverage
+composer audit
+```
+
+`composer check` executa PHPStan no nível máximo e PHPUnit para todo o Omegaalfa Utils. Testes de lazy objects exigem PHP 8.4 ou superior.
+
+O `@phpstan-ignore-next-line` em `LazyObject::proxy()` é intencional: o stub atual do PHPStan exige `callable(T): T`, enquanto a API nativa declara uma factory que retorna `object` e deixa a compatibilidade concreta da instância retornada ser validada pelo engine. A anotação pode ser removida quando o stub refletir esse contrato.
+
+## 🔗 Compatibilidade
+
+O módulo exige PHP 8.4 ou superior e usa diretamente `ReflectionClass::newLazyProxy()` e `ReflectionClass::newLazyGhost()`.
+
+Documentação oficial: [Lazy Objects](https://www.php.net/language.oop5.lazy-objects.php), [`newLazyProxy()`](https://www.php.net/manual/en/reflectionclass.newlazyproxy.php) e [`newLazyGhost()`](https://www.php.net/manual/en/reflectionclass.newlazyghost.php).
+
+## 📄 Licença
+
+🟢 Distribuído sob a licença **MIT**. Consulte o arquivo [LICENSE](../../LICENSE).
