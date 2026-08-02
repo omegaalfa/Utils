@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Omegaalfa\LazyObject\Tests;
+namespace Tests\LazyObject;
 
 use ArrayObject;
 use Error;
 use InvalidArgumentException;
-use Omegaalfa\LazyObject\LazyObject;
+use Omegaalfa\Utils\LazyObject\LazyObject;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -17,6 +17,7 @@ use stdClass;
 
 interface TestContract {}
 trait TestTrait {}
+final class TestTraitConsumer { use TestTrait; }
 enum TestEnum { case Value; }
 abstract class AbstractFixture {}
 
@@ -28,6 +29,7 @@ class ServiceFixture
 
 class CompatibleChild extends ServiceFixture {}
 class ChildWithProperty extends ServiceFixture { public int $extra = 1; }
+/** @extends ArrayObject<array-key, mixed> */
 final class InternalChild extends ArrayObject {}
 final class StatelessFixture { public function ping(): string { return 'pong'; } }
 
@@ -74,14 +76,14 @@ final class LazyObjectTest extends TestCase
         $proxy = LazyObject::proxy(ServiceFixture::class, static fn (ServiceFixture $object): object => new CompatibleChild('child'));
 
         $this->expectException(Error::class);
-        $proxy->value;
+        self::consume($proxy->value);
     }
 
     public function testEngineRejectsIncompatibleFactoryAndProxyItself(): void
     {
         $incompatible = LazyObject::proxy(ServiceFixture::class, static fn (ServiceFixture $object): object => new stdClass());
         try {
-            $incompatible->value;
+            self::consume($incompatible->value);
             self::fail('Incompatible factory was accepted.');
         } catch (Error $error) {
             self::assertStringContainsString('must be', $error->getMessage());
@@ -89,7 +91,7 @@ final class LazyObjectTest extends TestCase
 
         $self = LazyObject::proxy(ServiceFixture::class, static fn (ServiceFixture $object): object => $object);
         $this->expectException(Error::class);
-        $self->value;
+        self::consume($self->value);
     }
 
     public function testProxyCloneAndSerializationInitializeOnce(): void
@@ -171,7 +173,7 @@ final class LazyObjectTest extends TestCase
             $object->__construct('recovered');
         });
 
-        try { $ghost->value; self::fail('Expected initializer failure.'); }
+        try { self::consume($ghost->value); self::fail('Expected initializer failure.'); }
         catch (RuntimeException $error) { self::assertSame('temporary', $error->getMessage()); }
 
         self::assertSame('recovered', $ghost->value);
@@ -183,6 +185,7 @@ final class LazyObjectTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage($fragment);
+        /** @phpstan-ignore argument.type */
         LazyObject::ghost($class, static function (object $object): void {});
     }
 
@@ -198,6 +201,7 @@ final class LazyObjectTest extends TestCase
     public function testUnknownClassPreservesReflectionException(): void
     {
         try {
+            /** @phpstan-ignore argument.type */
             LazyObject::proxy('Missing\\Service', static fn (object $object): object => $object);
             self::fail('Unknown class was accepted.');
         } catch (InvalidArgumentException $error) {
@@ -207,9 +211,11 @@ final class LazyObjectTest extends TestCase
     }
 
     #[DataProvider('engineRejectedClasses')]
+    /** @param class-string $class */
     public function testEngineErrorsAreNotConverted(string $class): void
     {
         $this->expectException(Error::class);
+        /** @phpstan-ignore argument.type */
         LazyObject::ghost($class, static function (object $object): void {});
     }
 
@@ -268,6 +274,11 @@ final class LazyObjectTest extends TestCase
         self::assertSame(0, $ghostCalls);
         self::assertStringNotContainsString('proxy', $proxySerialized);
         self::assertStringNotContainsString('ghost', $ghostSerialized);
+    }
+
+    private static function consume(mixed $value): void
+    {
+        self::assertNotNull($value);
     }
 
     public function testRepeatedCallsForSameClassRemainIndependent(): void

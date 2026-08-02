@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Omegaalfa\LazyObject\Tests\Type;
+namespace Tests\LazyObject\Type;
 
-use Omegaalfa\LazyObject\LazyObject;
+use Omegaalfa\Utils\LazyObject\LazyObject;
 
 use function PHPStan\Testing\assertType;
 

@@ -43,7 +43,6 @@ Requisitos:
 | EnvLoader | Ler configuração de arquivos `.env` confiáveis | Scripts, CLIs e desenvolvimento local precisam carregar variáveis | [Guia do EnvLoader](src/EnvLoader/README.md) |
 | Stream | Encapsular resources nativos com leitura incremental | Você precisa manipular arquivos, memória, linhas ou CSV sem carregar tudo | [Guia de Stream](src/Stream/README.md) |
 | Session | Gerenciar a sessão nativa preservando tipos | Uma aplicação HTTP pequena precisa de uma API previsível sobre `$_SESSION` | [Guia de Session](src/Session/README.md) |
-| Fibers | Agendar tarefas cooperativas em round-robin | Tarefas em uma thread precisam ceder controle explicitamente | [Guia de Fibers](src/Fibers/README.md) |
 | Helpers | Funções opcionais de texto, JSON e validação | Um script aceita importar explicitamente funções globais | [Guia de Helpers](helpers/README.md) |
 | Debug | Dump tipado com atalhos globais opcionais | Você precisa inspecionar valores durante o desenvolvimento | [Guia de Debug](src/Debug/README.md) |
 | Clock | Tempo atual injetável e determinístico | Regras temporais precisam ser testadas sem depender do relógio real | [Guia de Clock](src/Clock/README.md) |
@@ -66,7 +65,6 @@ flowchart TD
     A -->|Configuração .env| B[EnvLoader]
     A -->|I/O incremental| C[Stream]
     A -->|Estado HTTP por usuário| D[Session]
-    A -->|Cooperação entre tarefas| E[FiberScheduler]
     A -->|Transformação pequena| F[Helpers]
     A -->|String otimizada| G[Str]
     A -->|Evitar execução simultânea| H[Lock]

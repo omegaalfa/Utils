@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Omegaalfa\LazyObject\Tests\Type;
+namespace Tests\LazyObject\Type;
 
 final class TypeService
 {
