@@ -18,6 +18,20 @@ final readonly class CreateUserData extends DataTransferObject
     }
 }
 
+final readonly class CredentialsData extends DataTransferObject
+{
+    public function __construct(
+        private string $secret,
+        public string $name,
+    ) {
+    }
+
+    public function secret(): string
+    {
+        return $this->secret;
+    }
+}
+
 final class DataTransferObjectTest extends TestCase
 {
     public function testCreatesTypedDtoNormally(): void
@@ -71,6 +85,21 @@ final class DataTransferObjectTest extends TestCase
         self::assertSame(45, $original->age);
         self::assertSame(46, $modified->age);
         self::assertSame($original->name, $modified->name);
+    }
+
+    public function testIncludesPrivatePromotedProperties(): void
+    {
+        $data = new CredentialsData('s3cret', 'n');
+
+        self::assertSame(['secret' => 's3cret', 'name' => 'n'], $data->toArray());
+        self::assertSame(
+            '{"secret":"s3cret","name":"n"}',
+            json_encode($data, JSON_THROW_ON_ERROR),
+        );
+
+        $modified = $data->with(['name' => 'other']);
+        self::assertSame('s3cret', $modified->secret());
+        self::assertSame('other', $modified->name);
     }
 
     public function testNativeConstructorEnforcesTypes(): void

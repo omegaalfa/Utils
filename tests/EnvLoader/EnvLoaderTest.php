@@ -171,6 +171,17 @@ final class EnvLoaderTest extends TestCase
         EnvLoader::get('INVALID_VALUE');
     }
 
+    public function testHasIgnoresNonScalarValues(): void
+    {
+        $this->keys[] = 'NON_SCALAR_VALUE';
+        $_ENV['NON_SCALAR_VALUE'] = ['not', 'scalar'];
+        $this->keys[] = 'SERVER_NON_SCALAR_VALUE';
+        $_SERVER['SERVER_NON_SCALAR_VALUE'] = ['also', 'not', 'scalar'];
+
+        self::assertFalse(EnvLoader::has('NON_SCALAR_VALUE'));
+        self::assertFalse(EnvLoader::has('SERVER_NON_SCALAR_VALUE'));
+    }
+
     public function testRejectsFilesLargerThanSafetyLimit(): void
     {
         $this->expectException(RuntimeException::class);

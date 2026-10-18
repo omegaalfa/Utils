@@ -59,7 +59,6 @@ final readonly class ScriptExecutor
                 2 => ['file', $stderrPath, 'wb'],
             ];
 
-            $path = $this->validatedPath($script);
             $process = @proc_open(
                 [$this->phpBinary, $path],
                 $descriptors,

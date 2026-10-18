@@ -14,7 +14,7 @@ Use-o para storage local de scripts, CLIs e micro-aplicações. Não o use para 
 
 - ✅ raiz isolada;
 - ✅ bloqueio de caminhos absolutos, NUL e `..`;
-- ✅ detecção de symlink que escapa da raiz;
+- ✅ detecção de symlink que escapa da raiz (leitura e escrita);
 - ✅ escrita atômica por padrão;
 - ✅ overwrite explícito;
 - ✅ listagem ordenada e recursiva;
@@ -43,7 +43,9 @@ PHP 8.4+, sem dependências adicionais.
 
 ## Conceitos
 
-A raiz é resolvida com `realpath()`. Entradas são normalizadas lexicalmente e destinos têm o diretório pai novamente validado depois da criação. Caminhos absolutos e segmentos `..` são rejeitados.
+A raiz é resolvida com `realpath()` (inclusive quando é `/`). Entradas são normalizadas lexicalmente e destinos têm o diretório pai novamente validado depois da criação. Caminhos absolutos e segmentos `..` são rejeitados.
+
+Symlinks que resolvem dentro da raiz são seguidos normalmente. Um destino que é symlink para fora da raiz — ou um symlink pendente que não pode ser resolvido — é rejeitado em qualquer operação de escrita (`write()`, `copy()`, `move()` e `stream()` de escrita), e `createDirectory()` recusa criar sob um componente de caminho que escape da raiz.
 
 A escrita atômica cria um temporário no mesmo diretório, grava, aplica permissões e usa `rename()`. Isso reduz arquivos parcialmente escritos; a semântica final depende do filesystem.
 
@@ -150,6 +152,9 @@ Não há benchmark publicado. Leitura completa aloca conforme o arquivo; `stream
 |---|---|
 | `Parent directory traversal is not allowed` | Remova `..`. |
 | `Path does not exist inside filesystem root` | Corrija caminho ou symlink. |
+| `Destination escapes filesystem root` | O destino (ou seu symlink) aponta fora da raiz; corrija o caminho. |
+| `Destination is an unresolvable symbolic link` | Remova o symlink pendente ou aponte-o para um alvo existente. |
+| `Directory escapes filesystem root` | Não crie diretórios sob symlinks que saiam da raiz. |
 | `Destination already exists` | Decida e passe `overwrite: true`. |
 | `Unable to atomically replace` | Verifique permissões e semântica do mount. |
 

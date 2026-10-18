@@ -49,9 +49,19 @@ final readonly class ScriptFinder
     /** @return list<array{name: string, path: string}> */
     public function roots(): array
     {
+        $basenameCounts = [];
+        foreach ($this->roots as $root) {
+            $basename = basename($root);
+            $basenameCounts[$basename] = ($basenameCounts[$basename] ?? 0) + 1;
+        }
+
         $roots = [];
         foreach ($this->roots as $root) {
-            $roots[] = ['name' => basename($root), 'path' => $root];
+            $basename = basename($root);
+            $roots[] = [
+                'name' => $basenameCounts[$basename] > 1 ? $root : $basename,
+                'path' => $root,
+            ];
         }
 
         usort(

@@ -32,7 +32,7 @@ Requisitos:
 | Requisito | Versão |
 |---|---|
 | PHP | 8.4 ou superior |
-| Extensões obrigatórias adicionais | intl e mbstring |
+| Extensões obrigatórias adicionais | mbstring |
 | Dependências de runtime | Nenhuma |
 | Autoload | PSR-4; helpers globais são opt-in |
 

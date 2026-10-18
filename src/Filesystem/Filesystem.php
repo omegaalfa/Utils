@@ -28,7 +28,8 @@ final class Filesystem
             throw new RuntimeException("Invalid filesystem root: {$root}");
         }
 
-        $this->root = rtrim($canonical, DIRECTORY_SEPARATOR);
+        $trimmed = rtrim($canonical, DIRECTORY_SEPARATOR);
+        $this->root = $trimmed === '' ? DIRECTORY_SEPARATOR : $trimmed;
     }
 
     public function getRoot(): string
@@ -105,6 +106,12 @@ final class Filesystem
         if (is_dir($directory)) {
             return;
         }
+
+        $ancestor = realpath($this->existingAncestor($directory));
+        if ($ancestor === false || !$this->isWithinRoot($ancestor)) {
+            throw new RuntimeException("Directory escapes filesystem root: {$path}");
+        }
+
         if (!@mkdir($directory, $permissions, $recursive) && !is_dir($directory)) {
             throw new RuntimeException("Unable to create directory: {$path}");
         }
@@ -208,7 +215,7 @@ final class Filesystem
                 $files[] = str_replace(
                     DIRECTORY_SEPARATOR,
                     '/',
-                    substr($file->getPathname(), strlen($this->root) + 1),
+                    $this->relativeFromRoot($file->getPathname()),
                 );
             }
         }
@@ -290,7 +297,36 @@ final class Filesystem
 
         return $segments === []
             ? $this->root
-            : $this->root . DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $segments);
+            : $this->absolute(implode(DIRECTORY_SEPARATOR, $segments));
+    }
+
+    private function absolute(string $relative): string
+    {
+        return $this->rootPrefix() . $relative;
+    }
+
+    private function rootPrefix(): string
+    {
+        return rtrim($this->root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    }
+
+    private function relativeFromRoot(string $absolute): string
+    {
+        return substr($absolute, strlen($this->rootPrefix()));
+    }
+
+    private function existingAncestor(string $absolute): string
+    {
+        $current = $absolute;
+        while (!file_exists($current) && !is_link($current)) {
+            $parent = dirname($current);
+            if ($parent === $current) {
+                return $current;
+            }
+            $current = $parent;
+        }
+
+        return $current;
     }
 
     private function existingPath(string $path): string
@@ -309,12 +345,24 @@ final class Filesystem
     {
         $destination = $this->path($path);
         $parent = dirname($destination);
-        $relativeParent = substr($parent, strlen($this->root));
-        $this->createDirectory($relativeParent === '' ? '.' : ltrim($relativeParent, DIRECTORY_SEPARATOR));
+        $relativeParent = $this->relativeFromRoot($parent);
+        $this->createDirectory($relativeParent === '' ? '.' : $relativeParent);
 
         $canonicalParent = realpath($parent);
         if ($canonicalParent === false || !$this->isWithinRoot($canonicalParent)) {
             throw new RuntimeException("Destination escapes filesystem root: {$path}");
+        }
+
+        if (is_link($destination)) {
+            $resolved = realpath($destination);
+            if ($resolved === false) {
+                throw new RuntimeException("Destination is an unresolvable symbolic link: {$path}");
+            }
+            if (!$this->isWithinRoot($resolved)) {
+                throw new RuntimeException("Destination escapes filesystem root: {$path}");
+            }
+
+            return $resolved;
         }
 
         return $destination;
@@ -323,7 +371,7 @@ final class Filesystem
     private function isWithinRoot(string $path): bool
     {
         return $path === $this->root
-            || str_starts_with($path, $this->root . DIRECTORY_SEPARATOR);
+            || str_starts_with($path, $this->rootPrefix());
     }
 
     private function applyPermissions(string $path, int $permissions): void

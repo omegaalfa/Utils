@@ -14,14 +14,15 @@ Use-a em scripts, CLIs e micro-aplicações que precisam dessas operações sem 
 
 - ✅ métodos públicos e estáticos;
 - ✅ funções nativas de contains/prefix/suffix;
-- ✅ transliteração ICU via `intl`;
+- ✅ transliteração latina determinística (sem `ext-intl`);
 - ✅ truncamento UTF-8 via `mbstring`;
 - ✅ aleatoriedade criptográfica;
 - ✅ máscara com substituição direta;
 - ✅ zero pacotes Composer em runtime;
 - ❌ máscara não é multibyte;
 - ❌ random usa somente alfabeto hexadecimal;
-- ❌ slug aceita divisor ASCII de um byte.
+- ❌ slug aceita divisor ASCII de um byte;
+- ❌ slug descarta scripts não transliteráveis (ex.: CJK).
 
 ## Instalação
 
@@ -32,7 +33,6 @@ composer require omegaalfa/utils
 Requisitos:
 
 - PHP 8.4+;
-- `ext-intl`;
 - `ext-mbstring`.
 
 ## Início rápido
@@ -108,7 +108,7 @@ $ending = Str::mask('secret-token', '*', -5);
 | `contains(string $haystack, string $needle)` | `bool` | Delega a `str_contains()`. |
 | `startsWith(string $haystack, string $needle)` | `bool` | Delega a `str_starts_with()`. |
 | `endsWith(string $haystack, string $needle)` | `bool` | Delega a `str_ends_with()`. |
-| `slugify(string $text, string $divider = '-')` | `string` | Translitera com ICU, converte para minúsculas e reduz caracteres especiais ao divisor. Divisor inválido gera `InvalidArgumentException`. |
+| `slugify(string $text, string $divider = '-')` | `string` | Translitera com o mapa latino interno, converte para minúsculas e reduz caracteres especiais ao divisor. Divisor inválido gera `InvalidArgumentException`. |
 | `truncate(string $text, int $length, string $append = '...')` | `string` | Preserva caracteres UTF-8. Comprimento negativo gera `InvalidArgumentException`. |
 | `random(int $length = 16)` | `string` | Retorna exatamente o tamanho solicitado em hexadecimal. Comprimento negativo é inválido; zero retorna vazio. |
 | `mask(string $string, string $character, int $index, ?int $length = null)` | `string` | Mascara bytes desde índice positivo ou negativo. Caractere deve ter um byte e comprimento não pode ser negativo. |
@@ -117,16 +117,16 @@ $ending = Str::mask('secret-token', '*', -5);
 
 ```mermaid
 flowchart LR
-    A[Texto UTF-8] --> B[ICU Any-Latin]
-    B --> C[Latin-ASCII + Lower]
-    C --> D[Regex agrupa caracteres especiais]
-    D --> E[Aplicar divisor]
+    A[Texto UTF-8] --> B[Mapa latino interno]
+    B --> C[Regex agrupa caracteres especiais]
+    C --> D[Aplicar divisor]
+    D --> E[Converter para minúsculas]
     E --> F[Remover divisor das bordas]
 ```
 
 ## Performance
 
-Não há benchmark publicado. Os três métodos de consulta delegam diretamente às funções nativas. `random()` calcula `ceil(length / 2)` sem ponto flutuante e corta uma única vez. `mask()` usa `strlen`, `str_repeat` e `substr_replace`. `slugify()` executa transliteração ICU e uma regex inevitável; `truncate()` percorre UTF-8 com mbstring.
+Não há benchmark publicado. Os três métodos de consulta delegam diretamente às funções nativas. `random()` calcula `ceil(length / 2)` sem ponto flutuante e corta uma única vez. `mask()` usa `strlen`, `str_repeat` e `substr_replace`. `slugify()` executa uma transliteração por mapa e uma regex inevitável; `truncate()` percorre UTF-8 com mbstring.
 
 ## Melhores práticas
 
@@ -151,21 +151,20 @@ Não há benchmark publicado. Os três métodos de consulta delegam diretamente 
 
 | Problema | Causa | Solução |
 |---|---|---|
-| `Call to undefined function transliterator_transliterate` | `ext-intl` ausente | Instale/habilite intl. |
 | `Call to undefined function mb_substr` | `ext-mbstring` ausente | Instale/habilite mbstring. |
 | `Slug divider...` | Divisor vazio, multibyte, múltiplo ou alfanumérico | Use `-`, `_` ou outro separador ASCII. |
+| Slug descarta caracteres (ex.: CJK) | Mapa latino interno não cobre o script | Translitera antes ou aceite a remoção. |
 | Máscara corrompe UTF-8 | Operação byte-oriented | Use solução multibyte específica. |
 
 ## Oportunidades de melhoria
 
 - Um `maskUtf8()` separado evitaria comprometer o hot path ASCII.
-- Benchmarks podem comparar ICU com alternativas manuais em datasets reais.
+- Benchmarks podem comparar o mapa interno com alternativas ICU em datasets reais.
 - Um gerador com alfabeto configurável seria outro contrato e deve permanecer separado de `random()`.
-- Cache de transliterator poderia reduzir setup em chamadas repetidas, mas precisa ser medido antes de adicionar estado estático.
 
 ## Contribuição
 
-Execute `composer check` com `intl` e `mbstring` habilitadas. Casos novos devem cobrir ASCII, UTF-8, limites vazios e argumentos inválidos.
+Execute `composer check` com `mbstring` habilitada. Casos novos devem cobrir ASCII, UTF-8, limites vazios e argumentos inválidos.
 
 ## Licença
 

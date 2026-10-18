@@ -137,7 +137,7 @@ Use `chmod 600`. No Windows, a verificação Unix é ignorada.
 | Método | Retorno | Comportamento e falhas |
 |---|---|---|
 | `load(?string $path = null, bool $required = false, bool $overwrite = false, bool $strictPermissions = false)` | `void` | Carrega o arquivo. Lança `RuntimeException` para arquivo obrigatório ausente, ilegível, grande ou inseguro; `InvalidArgumentException` para sintaxe inválida. |
-| `has(string $key)` | `bool` | Verifica todas as fontes. Chaves inválidas lançam `InvalidArgumentException`. |
+| `has(string $key)` | `bool` | `true` somente quando existe valor escalar utilizável; garante que `get()`/`require()` não lançam. Chaves inválidas lançam `InvalidArgumentException`. |
 | `get(string $key, ?string $default = null)` | `?string` | Retorna o valor seguindo a precedência. Valores escalares de superglobais são convertidos para string; outros geram `RuntimeException`. |
 | `require(string $key)` | `string` | Exige valor presente e não vazio; caso contrário lança `RuntimeException`. |
 | `getInt(string $key, ?int $default = null)` | `?int` | Aceita somente inteiro decimal opcionalmente negativo. |

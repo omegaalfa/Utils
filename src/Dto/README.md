@@ -19,7 +19,8 @@ Use em boundaries de controller, service, fila e integração. Não use como ent
 - ✅ `toArray()`;
 - ✅ `with()` imutável;
 - ✅ `JsonSerializable`;
-- ✅ zero reflection e dependências;
+- ✅ zero dependências externas;
+- ❌ `toArray()` usa reflection (uma vez por chamada);
 - ❌ sem validação de domínio;
 - ❌ sem hidratação recursiva;
 - ❌ sem atributos ou casts automáticos.
@@ -50,9 +51,9 @@ $service->create($data);
 
 ## Conceitos
 
-O DTO filho deve ser `readonly` e expor propriedades públicas pelo construtor. O PHP valida tipos, argumentos ausentes e nomes desconhecidos. A base não usa reflection, setters ou estado oculto.
+O DTO filho deve ser `readonly` e expor propriedades pelo construtor (públicas, protegidas ou privadas). O PHP valida tipos, argumentos ausentes e nomes desconhecidos. A base não usa setters nem estado oculto.
 
-`toArray()` é raso: objetos internos permanecem objetos. `with()` reconstrói pelo construtor, portanto todas as invariantes do filho continuam aplicadas.
+`toArray()` é raso: objetos internos permanecem objetos. Ele inclui propriedades privadas e protegidas para que `with()` consiga reconstruir a instância. `with()` reconstrói pelo construtor, portanto todas as invariantes do filho continuam aplicadas.
 
 ## Casos de uso
 
@@ -100,7 +101,7 @@ flowchart LR
 | Método | Retorno | Contrato |
 |---|---|---|
 | `fromArray(array $data)` | `static` | Usa unpack por named arguments; errors nativos para shape/tipos inválidos. |
-| `toArray()` | `array<string,mixed>` | Propriedades públicas visíveis, conversão rasa. |
+| `toArray()` | `array<string,mixed>` | Todas as propriedades (inclusive privadas e protegidas), conversão rasa. |
 | `with(array $changes)` | `static` | Cria nova instância aplicando mudanças. |
 | `jsonSerialize()` | `array<string,mixed>` | Mesmo resultado de `toArray()`. |
 
@@ -112,7 +113,7 @@ Arrays permitem typo de chave, campos ausentes e valores com tipos inesperados a
 
 Uma classe readonly pura sem herança tem overhead mínimo e pode ser suficiente. Esta base agrega conversões comuns. Bibliotecas de DTO com reflection, attributes, casts e validation oferecem automação maior com custo e regras adicionais.
 
-Não há benchmark. Construção usa named argument unpack nativo; `toArray()` usa `get_object_vars()`; `with()` aloca necessariamente outro objeto.
+Não há benchmark. Construção usa named argument unpack nativo; `toArray()` percorre as propriedades via reflection; `with()` aloca necessariamente outro objeto.
 
 ## Boas práticas
 

@@ -74,15 +74,20 @@ final class EnvLoader
     }
 
     /**
+     * Returns true only when a scalar value is actually resolvable for the key.
+     *
+     * A `true` result guarantees that {@see self::get()} and
+     * {@see self::require()} can read the key without throwing.
+     *
      * @param string $key
      * @return bool
      */
     public static function has(string $key): bool
     {
         self::assertValidKey($key);
-        return array_key_exists($key, $_ENV)
-            || array_key_exists($key, $_SERVER)
-            || getenv($key) !== false;
+        [$found, $value] = self::rawValue($key);
+
+        return $found && self::isScalarValue($value);
     }
 
     /**
@@ -93,18 +98,9 @@ final class EnvLoader
     public static function get(string $key, ?string $default = null): ?string
     {
         self::assertValidKey($key);
+        [$found, $value] = self::rawValue($key);
 
-        if (array_key_exists($key, $_ENV)) {
-            return self::stringify($_ENV[$key], $key);
-        }
-        $value = getenv($key);
-        if ($value !== false) {
-            return $value;
-        }
-        if (array_key_exists($key, $_SERVER)) {
-            return self::stringify($_SERVER[$key], $key);
-        }
-        return $default;
+        return $found ? self::stringify($value, $key) : $default;
     }
 
     /**
@@ -303,6 +299,35 @@ final class EnvLoader
             $suffix = $location === null ? '' : " at {$location}";
             throw new InvalidArgumentException("Invalid environment variable name: {$key}{$suffix}");
         }
+    }
+
+    /**
+     * Resolves the raw value following $_ENV, getenv() and $_SERVER precedence.
+     *
+     * @param string $key
+     * @return array{bool, mixed}
+     */
+    private static function rawValue(string $key): array
+    {
+        if (array_key_exists($key, $_ENV)) {
+            return [true, $_ENV[$key]];
+        }
+
+        $value = getenv($key);
+        if ($value !== false) {
+            return [true, $value];
+        }
+
+        if (array_key_exists($key, $_SERVER)) {
+            return [true, $_SERVER[$key]];
+        }
+
+        return [false, null];
+    }
+
+    private static function isScalarValue(mixed $value): bool
+    {
+        return is_string($value) || is_int($value) || is_float($value) || is_bool($value);
     }
 
     private static function stringify(mixed $value, string $key): string

@@ -18,13 +18,13 @@ if (!function_exists('removerAcentos')) {
 if (!function_exists('slugify')) {
     /**
      * Converts text to a lowercase, URL-friendly slug.
+     *
+     * Delegates to {@see \Omegaalfa\Utils\Str\Str::slugify()} so the helper and
+     * the class always produce the same slug for the same input.
      */
     function slugify(string $string): string
     {
-        $string = \Omegaalfa\Utils\Helpers\LatinText::transliterate($string);
-        $string = preg_replace('/[^A-Za-z0-9]+/', '-', $string) ?? $string;
-
-        return trim(strtolower($string), '-');
+        return \Omegaalfa\Utils\Str\Str::slugify($string);
     }
 }
 

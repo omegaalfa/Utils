@@ -68,6 +68,34 @@ final class ScriptRunnerTest extends TestCase
         new ScriptFinder([$link]);
     }
 
+    public function testFinderDisambiguatesRootsSharingBasename(): void
+    {
+        $first = $this->path('a/scripts');
+        $second = $this->path('b/scripts');
+        mkdir($first, 0700, true);
+        mkdir($second, 0700, true);
+
+        $roots = (new ScriptFinder([$first, $second]))->roots();
+
+        self::assertSame(
+            [
+                ['name' => $first, 'path' => $first],
+                ['name' => $second, 'path' => $second],
+            ],
+            $roots,
+        );
+    }
+
+    public function testFinderKeepsBasenameLabelWhenRootsAreUnique(): void
+    {
+        $root = $this->path('scripts');
+        mkdir($root, 0700, true);
+
+        $roots = (new ScriptFinder([$root]))->roots();
+
+        self::assertSame([['name' => 'scripts', 'path' => $root]], $roots);
+    }
+
     public function testFinderRejectsDirectoryOutsideRootAndSimilarPrefix(): void
     {
         $root = $this->path('root');

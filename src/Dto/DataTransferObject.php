@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Omegaalfa\Utils\Dto;
 
 use JsonSerializable;
+use ReflectionObject;
 
 /**
- * Lightweight base for readonly DTOs with public constructor-promoted fields.
+ * Lightweight base for readonly DTOs with constructor-promoted fields.
  */
 abstract readonly class DataTransferObject implements JsonSerializable
 {
@@ -18,11 +19,22 @@ abstract readonly class DataTransferObject implements JsonSerializable
         return new static(...$data);
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Returns every non-static property, including private and protected ones.
+     *
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
-        /** @var array<string, mixed> $data */
-        $data = get_object_vars($this);
+        $data = [];
+        foreach ((new ReflectionObject($this))->getProperties() as $property) {
+            if ($property->isStatic() || !$property->isInitialized($this)) {
+                continue;
+            }
+
+            $data[$property->getName()] = $property->getValue($this);
+        }
+
         return $data;
     }
 

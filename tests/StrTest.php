@@ -7,7 +7,6 @@ namespace Tests;
 use InvalidArgumentException;
 use Omegaalfa\Utils\Str\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\TestCase;
 
 final class StrTest extends TestCase
@@ -23,7 +22,6 @@ final class StrTest extends TestCase
         self::assertFalse(Str::endsWith('omegaalfa', 'omega'));
     }
 
-    #[RequiresPhpExtension('intl')]
     #[DataProvider('slugValues')]
     public function testSlugify(string $text, string $divider, string $expected): void
     {
@@ -34,12 +32,14 @@ final class StrTest extends TestCase
     public static function slugValues(): iterable
     {
         yield 'Portuguese' => ['Olá, São Paulo!', '-', 'ola-sao-paulo'];
-        yield 'Unicode' => ['Crème brûlée — 東京', '_', 'creme_brulee_dong_jing'];
+        yield 'Latin accents' => ['Crème brûlée', '_', 'creme_brulee'];
+        yield 'untranslatable scripts are dropped' => ['Crème brûlée — 東京', '_', 'creme_brulee'];
+        yield 'ligatures' => ['ﬁle ﬂow', '-', 'file-flow'];
+        yield 'Turkish dotted I' => ['İstanbul', '-', 'istanbul'];
         yield 'separators' => ['  PHP && Utils  ', '-', 'php-utils'];
         yield 'empty' => ['', '-', ''];
     }
 
-    #[RequiresPhpExtension('intl')]
     #[DataProvider('invalidDividers')]
     public function testSlugifyRejectsUnsafeDivider(string $divider): void
     {

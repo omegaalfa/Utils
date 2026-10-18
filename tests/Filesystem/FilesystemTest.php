@@ -173,6 +173,77 @@ final class FilesystemTest extends TestCase
         }
     }
 
+    public function testRejectsSymlinkWriteEscape(): void
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            self::markTestSkipped('Symbolic link setup differs on Windows.');
+        }
+
+        $outside = sys_get_temp_dir() . '/omega-fs-outside-' . bin2hex(random_bytes(4));
+        mkdir($outside, 0700);
+        $target = $outside . '/secret.txt';
+        file_put_contents($target, 'secret');
+        symlink($target, $this->root . '/out.txt');
+        $this->filesystem->write('source.txt', 'payload');
+
+        try {
+            foreach (
+                [
+                    fn () => $this->filesystem->copy('source.txt', 'out.txt', overwrite: true),
+                    fn () => $this->filesystem->write('out.txt', 'pwned', atomic: false),
+                    fn () => $this->filesystem->write('out.txt', 'pwned'),
+                    fn () => $this->filesystem->stream('out.txt', 'wb'),
+                ] as $attempt
+            ) {
+                try {
+                    $attempt();
+                    self::fail('Writing through a symlink that escapes the root must be rejected.');
+                } catch (RuntimeException $exception) {
+                    self::assertSame('Destination escapes filesystem root: out.txt', $exception->getMessage());
+                }
+            }
+
+            self::assertSame('secret', file_get_contents($target));
+        } finally {
+            unlink($this->root . '/out.txt');
+            unlink($this->root . '/source.txt');
+            unlink($target);
+            rmdir($outside);
+        }
+    }
+
+    public function testRejectsDirectoryCreationThroughEscapingSymlink(): void
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            self::markTestSkipped('Symbolic link setup differs on Windows.');
+        }
+
+        $outside = sys_get_temp_dir() . '/omega-fs-outside-' . bin2hex(random_bytes(4));
+        mkdir($outside, 0700);
+        symlink($outside, $this->root . '/link');
+
+        try {
+            try {
+                $this->filesystem->createDirectory('link/inner');
+                self::fail('Directory creation through an escaping symlink must be rejected.');
+            } catch (RuntimeException $exception) {
+                self::assertSame('Directory escapes filesystem root: link/inner', $exception->getMessage());
+            }
+
+            self::assertFalse(is_dir($outside . '/inner'));
+        } finally {
+            unlink($this->root . '/link');
+            rmdir($outside);
+        }
+    }
+
+    public function testSupportsFilesystemRoot(): void
+    {
+        $filesystem = new Filesystem('/');
+
+        self::assertSame('/', $filesystem->getRoot());
+    }
+
     public function testRefusesDirectoryDeletionThroughFileApi(): void
     {
         $this->filesystem->createDirectory('directory');

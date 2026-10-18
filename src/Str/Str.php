@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Omegaalfa\Utils\Str;
 
 use InvalidArgumentException;
+use Omegaalfa\Utils\Helpers\LatinText;
 use RuntimeException;
 
 final class Str
@@ -53,20 +54,14 @@ final class Str
             throw new InvalidArgumentException('Slug divider cannot be alphanumeric.');
         }
 
-        $text = transliterator_transliterate(
-            'Any-Latin; Latin-ASCII; Lower()',
-            $text,
-        );
-        if ($text === false) {
-            throw new RuntimeException('Unable to transliterate the supplied text.');
-        }
+        $text = LatinText::transliterate($text);
 
-        $slug = preg_replace('/[^a-z0-9]+/', $divider, $text);
+        $slug = preg_replace('/[^A-Za-z0-9]+/', $divider, $text);
         if ($slug === null) {
             throw new RuntimeException('Unable to build slug from the supplied text.');
         }
 
-        return trim($slug, $divider);
+        return trim(strtolower($slug), $divider);
     }
 
     /**
