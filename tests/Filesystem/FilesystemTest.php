@@ -270,4 +270,108 @@ final class FilesystemTest extends TestCase
 
         self::assertFalse($this->filesystem->exists('new.txt'));
     }
+
+    public function testFindMatchesGlobPatternsAndFilters(): void
+    {
+        $this->filesystem->write('notes.txt', 'a');
+        $this->filesystem->write('readme.md', 'b');
+        $this->filesystem->write('nested/deep/notes.txt', 'c');
+        $this->filesystem->write('nested/other.txt', 'd');
+
+        self::assertSame(
+            ['nested/deep/notes.txt', 'nested/other.txt', 'notes.txt'],
+            $this->filesystem->find('*.txt'),
+        );
+        self::assertSame(['readme.md'], $this->filesystem->find('readme.*'));
+        self::assertSame(
+            ['nested/deep/notes.txt', 'notes.txt'],
+            $this->filesystem->find('note?.txt'),
+        );
+        self::assertSame(
+            ['nested/deep/notes.txt'],
+            $this->filesystem->find('*.txt', [
+                static fn (\SplFileInfo $file): bool => str_contains($file->getPathname(), 'deep'),
+            ]),
+        );
+        self::assertSame([], $this->filesystem->find('*.csv'));
+    }
+
+    public function testFindRejectsInvalidPatternsAndFilters(): void
+    {
+        try {
+            $this->filesystem->find('');
+            self::fail('An empty pattern must be rejected.');
+        } catch (InvalidArgumentException) {
+            self::addToAssertionCount(1);
+        }
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->filesystem->find('*.txt', ['not-callable']);
+    }
+
+    public function testDeleteRecursiveHandlesFilesAndDirectories(): void
+    {
+        $this->filesystem->write('file.txt', 'data');
+        self::assertTrue($this->filesystem->deleteRecursive('file.txt'));
+        self::assertFalse($this->filesystem->deleteRecursive('file.txt'));
+        self::assertFalse($this->filesystem->deleteRecursive('missing'));
+
+        $this->filesystem->createDirectory('empty');
+        self::assertTrue($this->filesystem->deleteRecursive('empty'));
+        self::assertFalse($this->filesystem->exists('empty'));
+    }
+
+    public function testDeleteRecursiveRequiresForceForNonEmptyDirectories(): void
+    {
+        $this->filesystem->write('tree/inner/file.txt', 'data');
+
+        try {
+            $this->filesystem->deleteRecursive('tree');
+            self::fail('A non-empty directory must require force.');
+        } catch (RuntimeException $exception) {
+            self::assertSame('Refusing to delete non-empty directory without force: tree', $exception->getMessage());
+        }
+
+        self::assertTrue($this->filesystem->exists('tree/inner/file.txt'));
+        self::assertTrue($this->filesystem->deleteRecursive('tree', force: true));
+        self::assertFalse($this->filesystem->exists('tree'));
+    }
+
+    public function testDeleteRecursiveRemovesNestedTrees(): void
+    {
+        $this->filesystem->write('tree/a/b/c.txt', '1');
+        $this->filesystem->write('tree/a/d.txt', '2');
+
+        self::assertTrue($this->filesystem->deleteRecursive('tree', force: true));
+        self::assertFalse($this->filesystem->exists('tree'));
+    }
+
+    public function testDeleteRecursiveUnlinksSymlinksWithoutFollowingThem(): void
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            self::markTestSkipped('Symbolic link setup differs on Windows.');
+        }
+
+        $outside = sys_get_temp_dir() . '/omega-fs-outside-' . bin2hex(random_bytes(4));
+        mkdir($outside, 0700);
+        file_put_contents($outside . '/keep.txt', 'keep');
+        symlink($outside . '/keep.txt', $this->root . '/link.txt');
+        symlink($outside, $this->root . '/dir-link');
+
+        try {
+            self::assertTrue($this->filesystem->deleteRecursive('link.txt'));
+            self::assertTrue($this->filesystem->deleteRecursive('dir-link', force: true));
+            self::assertFalse($this->filesystem->exists('link.txt'));
+            self::assertSame('keep', file_get_contents($outside . '/keep.txt'));
+        } finally {
+            if (is_link($this->root . '/link.txt')) {
+                unlink($this->root . '/link.txt');
+            }
+            if (is_link($this->root . '/dir-link')) {
+                unlink($this->root . '/dir-link');
+            }
+            unlink($outside . '/keep.txt');
+            rmdir($outside);
+        }
+    }
 }

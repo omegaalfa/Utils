@@ -56,6 +56,11 @@ Requisitos:
 | Retry | Repetição controlada de operações temporariamente instáveis | APIs, bancos ou filas podem falhar de forma transitória | [Guia de Retry](src/Retry/README.md) |
 | CLI | Comandos, argumentos, opções e saída de terminal | Você precisa estruturar ferramentas de linha de comando pequenas | [Guia de CLI](src/Cli/README.md) |
 | DTO | Objetos imutáveis e tipados para transporte de dados | Arrays sem contrato precisam virar dados previsíveis entre camadas | [Guia de DTO](src/Dto/README.md) |
+| Arr | Acesso e transformação de arrays com notação em ponto | Estruturas aninhadas precisam ser lidas ou reescritas sem mutação | [Guia de Arr](src/Arr/README.md) |
+| Process | Executar comandos sem shell, com timeout e captura de saída | Um binário externo precisa rodar com argumentos seguros e resultado previsível | [Guia de Process](src/Process/README.md) |
+| Hasher | Hash de senhas e HMAC em tempo constante | Autenticação, webhooks e comparações seguras não podem vazar tempo | [Guia de Hasher](src/Hasher/README.md) |
+| RateLimiter | Limite de tentativas por chave com janela deslizante | Login, APIs locais e cotas precisam bloquear abuso entre processos | [Guia de RateLimiter](src/RateLimiter/README.md) |
+| Json | Codificação e decodificação JSON com falhas explícitas | Payloads e configuração não devem tratar `false`/`null` silencioso | [Guia de Json](src/Json/README.md) |
 
 ## Escolha rápida
 
@@ -78,6 +83,11 @@ flowchart TD
     A -->|Controlar o tempo em testes| P[Clock]
     A -->|Adiar construção de objetos| Q[LazyObject]
     A -->|Executar scripts por menu| R[ScriptRunner]
+    A -->|Ler ou reescrever arrays aninhados| S[Arr]
+    A -->|Rodar comando externo sem shell| T[Process]
+    A -->|Hash de senha ou HMAC seguro| U[Hasher]
+    A -->|Limitar tentativas por chave| V[RateLimiter]
+    A -->|Codificar ou decodificar JSON| X[Json]
 ```
 
 > [!IMPORTANT]

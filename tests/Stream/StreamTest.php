@@ -168,6 +168,58 @@ final class StreamTest extends TestCase
         }
     }
 
+    public function testCopyToTransfersBytesAndReportsCount(): void
+    {
+        $source = $this->streamContaining('payload');
+        $target = new Stream();
+
+        self::assertSame(7, $source->copyTo($target));
+        $target->rewind();
+        self::assertSame('payload', $target->getContents());
+    }
+
+    public function testCopyToContinuesFromTheCurrentPosition(): void
+    {
+        $source = $this->streamContaining('abcdef');
+        self::assertSame('abc', $source->read(3));
+        $target = new Stream();
+
+        self::assertSame(3, $source->copyTo($target, bufferSize: 2));
+        $target->rewind();
+        self::assertSame('def', $target->getContents());
+    }
+
+    public function testCopyToHonorsTheBufferSize(): void
+    {
+        $source = $this->streamContaining(str_repeat('x', 10));
+        $target = new Stream();
+
+        self::assertSame(10, $source->copyTo($target, bufferSize: 3));
+    }
+
+    public function testCopyToRejectsInvalidConfigurations(): void
+    {
+        $stream = $this->streamContaining('data');
+        $readOnly = new Stream('php://memory', 'rb');
+
+        try {
+            $stream->copyTo($stream);
+            self::fail('Copying a stream onto itself must be rejected.');
+        } catch (InvalidArgumentException) {
+            self::addToAssertionCount(1);
+        }
+
+        try {
+            $stream->copyTo(new Stream(), bufferSize: 0);
+            self::fail('A non-positive buffer size must be rejected.');
+        } catch (InvalidArgumentException) {
+            self::addToAssertionCount(1);
+        }
+
+        $this->expectException(RuntimeException::class);
+        $stream->copyTo($readOnly);
+    }
+
     private function streamContaining(string $contents): Stream
     {
         $stream = new Stream();

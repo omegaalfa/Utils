@@ -147,4 +147,44 @@ final class Str
             $maskLength,
         );
     }
+
+    /**
+     * Masks a range of UTF-8 characters without splitting multibyte sequences.
+     *
+     * Offsets and lengths are counted in characters (not bytes). A negative
+     * index counts from the end of the string, matching {@see self::mask()}.
+     */
+    public static function maskUtf8(
+        string $string,
+        string $character,
+        int    $index,
+        ?int   $length = null,
+    ): string {
+        if (!mb_check_encoding($string, 'UTF-8')) {
+            throw new InvalidArgumentException('Mask input must be valid UTF-8.');
+        }
+        if (mb_strlen($character, 'UTF-8') !== 1) {
+            throw new InvalidArgumentException('Mask character must contain exactly one UTF-8 character.');
+        }
+        if ($length !== null && $length < 0) {
+            throw new InvalidArgumentException('Mask length cannot be negative.');
+        }
+
+        $stringLength = mb_strlen($string, 'UTF-8');
+        $offset = $index >= 0
+            ? min($index, $stringLength)
+            : max($stringLength + $index, 0);
+        $available = $stringLength - $offset;
+        $maskLength = $length === null
+            ? $available
+            : min($length, $available);
+
+        if ($maskLength === 0) {
+            return $string;
+        }
+
+        return mb_substr($string, 0, $offset, 'UTF-8')
+            . str_repeat($character, $maskLength)
+            . mb_substr($string, $offset + $maskLength, null, 'UTF-8');
+    }
 }

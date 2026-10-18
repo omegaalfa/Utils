@@ -66,7 +66,7 @@ Os helpers `filter_validate_*` retornam o valor tipado quando válido e `null` q
 
 ### JSON e passagem única
 
-`jsonToArray()` decodifica diretamente. No modo padrão, usa `json_last_error()` sem exceptions; com `throw: true`, usa `JSON_THROW_ON_ERROR`. Executar `json_validate()` antes duplicaria o parsing quando o conteúdo precisa ser materializado.
+`arrayToJson()` e `jsonToArray()` delegam ao módulo [Json](../src/Json/README.md), mantendo o contrato leniente dos helpers: sem exceptions quando `throw: false` (retornam `null`), e propagação de `JsonException`/`UnexpectedValueException` com `throw: true`. Executar `json_validate()` antes duplicaria o parsing quando o conteúdo precisa ser materializado.
 
 ## Casos de uso
 
@@ -168,13 +168,11 @@ $utc = timestamp('UTC');
 
 ```mermaid
 flowchart TD
-    A[jsonToArray] --> B{throw?}
-    B -->|não| C[json_decode]
-    C --> D{json_last_error}
-    D -->|erro| N[null]
-    B -->|sim| E[json_decode + JSON_THROW_ON_ERROR]
-    E --> F{resultado é array?}
-    D -->|sem erro| F
+    A[jsonToArray] --> B[Json::decode]
+    B -->|JsonException| C{throw?}
+    C -->|não| N[null]
+    C -->|sim| P[propaga JsonException]
+    B -->|valor| F{resultado é array?}
     F -->|não e throw=false| N
     F -->|não e throw=true| G[UnexpectedValueException]
     F -->|sim| H[array]

@@ -188,6 +188,51 @@ final class Stream
     }
 
     /**
+     * Copies the remaining readable bytes into another stream and returns the
+     * number of bytes written to the destination.
+     *
+     * @param Stream $out
+     * @param int $bufferSize
+     * @return int
+     */
+    public function copyTo(Stream $out, int $bufferSize = 8192): int
+    {
+        if ($bufferSize < 1) {
+            throw new InvalidArgumentException('Buffer size must be greater than zero.');
+        }
+        if ($out === $this) {
+            throw new InvalidArgumentException('Cannot copy a stream onto itself.');
+        }
+        if (!$this->isReadable()) {
+            throw new RuntimeException('Stream is not readable.');
+        }
+        if (!$out->isWritable()) {
+            throw new RuntimeException('Destination stream is not writable.');
+        }
+
+        $total = 0;
+        while (!$this->eof()) {
+            $chunk = $this->read($bufferSize);
+            if ($chunk === '') {
+                break;
+            }
+
+            $offset = 0;
+            $length = strlen($chunk);
+            while ($offset < $length) {
+                $written = $out->write(substr($chunk, $offset));
+                if ($written === 0) {
+                    throw new RuntimeException('Destination stream accepted zero bytes.');
+                }
+                $offset += $written;
+                $total += $written;
+            }
+        }
+
+        return $total;
+    }
+
+    /**
      * @return bool
      */
     public function isReadable(): bool

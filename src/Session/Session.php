@@ -143,6 +143,22 @@ final class Session
     /**
      * @return void
      */
+    /**
+     * Writes session data and releases the session lock early, letting the
+     * request continue without blocking other requests on the same session.
+     * Safe to call when no session is active.
+     */
+    public function close(): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return;
+        }
+
+        if (!session_write_close()) {
+            throw new RuntimeException('Unable to close the PHP session.');
+        }
+    }
+
     public function destroy(): void
     {
         $this->requireActive();

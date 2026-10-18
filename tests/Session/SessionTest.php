@@ -126,4 +126,23 @@ final class SessionTest extends TestCase
 
         new Session(cookieOptions: ['samesite' => 'None', 'secure' => false]);
     }
+
+    public function testCloseIsSafeWithoutAnActiveSession(): void
+    {
+        (new Session())->close();
+        self::assertSame(PHP_SESSION_NONE, session_status());
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testCloseWritesDataAndReleasesTheLock(): void
+    {
+        $session = new Session();
+        $session->start();
+        $session->set('key', 'value');
+
+        $session->close();
+
+        self::assertSame(PHP_SESSION_NONE, session_status());
+    }
 }

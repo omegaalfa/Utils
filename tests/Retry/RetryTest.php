@@ -183,6 +183,48 @@ final class RetryTest extends TestCase
         self::assertSame(2, $calls);
     }
 
+    public function testSupportsInjectableSleepForDeterministicTests(): void
+    {
+        $calls = 0;
+        $delays = [];
+
+        Retry::attempt(
+            operation: static function () use (&$calls): bool {
+                $calls++;
+                if ($calls < 3) {
+                    throw new RuntimeException('retry');
+                }
+
+                return true;
+            },
+            attempts: 3,
+            delayMilliseconds: 10,
+            multiplier: 2.0,
+            sleeper: static function (int $milliseconds) use (&$delays): void {
+                $delays[] = $milliseconds;
+            },
+        );
+
+        self::assertSame(3, $calls);
+        self::assertSame([10, 20], $delays);
+    }
+
+    public function testSleeperIsNotCalledWhenTheOperationSucceeds(): void
+    {
+        $delays = [];
+
+        Retry::attempt(
+            static fn (): string => 'ok',
+            attempts: 3,
+            delayMilliseconds: 5,
+            sleeper: static function (int $milliseconds) use (&$delays): void {
+                $delays[] = $milliseconds;
+            },
+        );
+
+        self::assertSame([], $delays);
+    }
+
     public function testRejectsInvalidConfiguration(): void
     {
         $invalid = [

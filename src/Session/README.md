@@ -139,6 +139,7 @@ Atrás de um proxy reverso confiável, informe `secure: true` explicitamente. O 
 | `pull(string $key, mixed $default = null)` | `mixed` | Obtém e remove a chave. |
 | `clear()` | `void` | Substitui `$_SESSION` por array vazio. |
 | `getAll()` / `all()` | `array` | Retornam todos os dados. |
+| `close()` | `void` | Grava os dados e libera o lock via `session_write_close()`; é no-op quando não há sessão ativa. |
 | `destroy()` | `void` | Exige sessão ativa, expira o cookie quando usado, limpa dados e destrói a sessão. |
 
 ## Fluxo interno
@@ -208,7 +209,6 @@ Não há benchmark publicado. Operações de dados são acessos diretos a `$_SES
 
 ## Oportunidades de melhoria
 
-- Um método `close()` baseado em `session_write_close()` reduziria lock em requisições longas.
 - Um factory configurável poderia substituir o singleton rígido e melhorar DX em containers.
 - Flash data pode ser útil, mas deve permanecer fora do núcleo até existir um contrato simples e testado.
 - Exceptions específicas permitiriam tratamento granular de configuração e lifecycle.

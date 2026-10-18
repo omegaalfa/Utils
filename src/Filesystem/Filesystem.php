@@ -224,6 +224,116 @@ final class Filesystem
         return $files;
     }
 
+    /**
+     * Returns every file under the root whose basename matches a glob-like
+     * pattern (`*` and `?` wildcards) and accepted by every filter.
+     *
+     * @param string $pattern Glob-like pattern applied to each file basename.
+     * @param array<array-key, mixed> $filters List of callables receiving each candidate SplFileInfo.
+     * @return list<string> Root-relative paths using forward slashes, in sort order.
+     */
+    public function find(string $pattern, array $filters = []): array
+    {
+        if ($pattern === '' || str_contains($pattern, "\0")) {
+            throw new InvalidArgumentException('Filesystem pattern cannot be empty or contain NUL bytes.');
+        }
+
+        foreach ($filters as $filter) {
+            if (!is_callable($filter)) {
+                throw new InvalidArgumentException('Filesystem filters must be callable.');
+            }
+        }
+
+        $regex = self::globToRegex($pattern);
+        $files = [];
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($this->root, RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+
+        foreach ($iterator as $file) {
+            assert($file instanceof SplFileInfo);
+            if (!$file->isFile()) {
+                continue;
+            }
+            if (!preg_match($regex, $file->getFilename())) {
+                continue;
+            }
+            foreach ($filters as $filter) {
+                /** @var callable(SplFileInfo): bool $filter */
+                if (!$filter($file)) {
+                    continue 2;
+                }
+            }
+
+            $files[] = str_replace(
+                DIRECTORY_SEPARATOR,
+                '/',
+                $this->relativeFromRoot($file->getPathname()),
+            );
+        }
+
+        sort($files, SORT_STRING);
+        return $files;
+    }
+
+    /**
+     * Deletes a file, symbolic link or directory tree and reports whether
+     * anything was removed. Directories are only emptied when $force is true,
+     * and symbolic links are always unlinked without following them.
+     */
+    public function deleteRecursive(string $path, bool $force = false): bool
+    {
+        $candidate = $this->path($path);
+        if (!file_exists($candidate) && !is_link($candidate)) {
+            return false;
+        }
+
+        if (is_link($candidate)) {
+            if (!@unlink($candidate)) {
+                throw new RuntimeException("Unable to delete symbolic link: {$path}");
+            }
+
+            return true;
+        }
+
+        if (!is_dir($candidate)) {
+            if (!@unlink($candidate)) {
+                throw new RuntimeException("Unable to delete file: {$path}");
+            }
+
+            return true;
+        }
+
+        $resolved = realpath($candidate);
+        if ($resolved === false || !$this->isWithinRoot($resolved)) {
+            throw new RuntimeException("Path does not exist inside filesystem root: {$path}");
+        }
+
+        if (!$force) {
+            $contents = new \FilesystemIterator($resolved, \FilesystemIterator::SKIP_DOTS);
+            if ($contents->valid()) {
+                throw new RuntimeException("Refusing to delete non-empty directory without force: {$path}");
+            }
+        } else {
+            $children = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($resolved, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::CHILD_FIRST,
+            );
+
+            foreach ($children as $child) {
+                assert($child instanceof SplFileInfo);
+                $child->isDir() && !$child->isLink()
+                    ? $this->removeEmptyDirectory($child->getPathname(), $path)
+                    : $this->removeLinkOrFile($child->getPathname(), $path);
+            }
+        }
+
+        $this->removeEmptyDirectory($resolved, $path);
+
+        return true;
+    }
+
     public function size(string $path): int
     {
         $size = filesize($this->existingPath($path));
@@ -387,5 +497,26 @@ final class Filesystem
         if ($permissions < 0 || $permissions > 0777) {
             throw new InvalidArgumentException('Permissions must be between 0000 and 0777.');
         }
+    }
+
+    private function removeLinkOrFile(string $absolute, string $path): void
+    {
+        if (!@unlink($absolute)) {
+            throw new RuntimeException("Unable to delete file: {$path}");
+        }
+    }
+
+    private function removeEmptyDirectory(string $absolute, string $path): void
+    {
+        if (!@rmdir($absolute)) {
+            throw new RuntimeException("Unable to delete directory: {$path}");
+        }
+    }
+
+    private static function globToRegex(string $pattern): string
+    {
+        $quoted = preg_quote($pattern, '/');
+
+        return '/^' . strtr($quoted, ['\*' => '.*', '\?' => '.']) . '$/D';
     }
 }

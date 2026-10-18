@@ -112,6 +112,7 @@ $ending = Str::mask('secret-token', '*', -5);
 | `truncate(string $text, int $length, string $append = '...')` | `string` | Preserva caracteres UTF-8. Comprimento negativo gera `InvalidArgumentException`. |
 | `random(int $length = 16)` | `string` | Retorna exatamente o tamanho solicitado em hexadecimal. Comprimento negativo é inválido; zero retorna vazio. |
 | `mask(string $string, string $character, int $index, ?int $length = null)` | `string` | Mascara bytes desde índice positivo ou negativo. Caractere deve ter um byte e comprimento não pode ser negativo. |
+| `maskUtf8(string $string, string $character, int $index, ?int $length = null)` | `string` | Igual a `mask()`, mas conta caracteres UTF-8 — nunca corta multibyte. Entrada precisa ser UTF-8 válido e o caractere de máscara ocupa exatamente um caractere. |
 
 ## Fluxo de slug
 
@@ -158,7 +159,6 @@ Não há benchmark publicado. Os três métodos de consulta delegam diretamente 
 
 ## Oportunidades de melhoria
 
-- Um `maskUtf8()` separado evitaria comprometer o hot path ASCII.
 - Benchmarks podem comparar o mapa interno com alternativas ICU em datasets reais.
 - Um gerador com alfabeto configurável seria outro contrato e deve permanecer separado de `random()`.
 

@@ -131,4 +131,49 @@ final class StrTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         Str::mask('secret', '*', 0, -1);
     }
+
+    #[DataProvider('maskUtf8Values')]
+    public function testMaskUtf8(
+        string $value,
+        string $character,
+        int $index,
+        ?int $length,
+        string $expected,
+    ): void {
+        self::assertSame($expected, Str::maskUtf8($value, $character, $index, $length));
+    }
+
+    /** @return iterable<string, array{string, string, int, int|null, string}> */
+    public static function maskUtf8Values(): iterable
+    {
+        yield 'multibyte kept intact' => ['Olá mundo', '*', 0, 3, '*** mundo'];
+        yield 'middle accents' => ['ação', '*', 1, 2, 'a**o'];
+        yield 'emoji units' => ['😀🚀✨', '*', 1, 1, '😀*✨'];
+        yield 'to the end' => ['secreto', '*', 3, null, 'sec****'];
+        yield 'negative index' => ['user@exemplo.com', '*', -4, 2, 'user@exemplo**om'];
+        yield 'length capped' => ['Olá', '*', 1, 99, 'O**'];
+        yield 'index beyond end' => ['Olá', '*', 99, null, 'Olá'];
+        yield 'zero length' => ['Olá', '*', 1, 0, 'Olá'];
+        yield 'multibyte mask character' => ['abcd', '•', 1, 2, 'a••d'];
+    }
+
+    public function testMaskUtf8RejectsInvalidInput(): void
+    {
+        try {
+            Str::maskUtf8("ol\301a", '*', 0);
+            self::fail('Invalid UTF-8 input must be rejected.');
+        } catch (InvalidArgumentException) {
+            self::addToAssertionCount(1);
+        }
+
+        try {
+            Str::maskUtf8('abc', '**', 0);
+            self::fail('A multi-character mask must be rejected.');
+        } catch (InvalidArgumentException) {
+            self::addToAssertionCount(1);
+        }
+
+        $this->expectException(InvalidArgumentException::class);
+        Str::maskUtf8('abc', '*', 0, -1);
+    }
 }

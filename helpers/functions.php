@@ -111,7 +111,7 @@ if (!function_exists('arrayToJson')) {
     function arrayToJson(array $array, bool $throw = false): ?string
     {
         try {
-            return json_encode($array, JSON_THROW_ON_ERROR);
+            return \Omegaalfa\Utils\Json\Json::encode($array);
         } catch (\JsonException $exception) {
             if ($throw) {
                 throw $exception;
@@ -126,6 +126,9 @@ if (!function_exists('jsonToArray')) {
     /**
      * Decodes a JSON object or array without performing a redundant validation pass.
      *
+     * Delegates to {@see \Omegaalfa\Utils\Json\Json::decode()} so the helper and
+     * the class always share the same decoding contract.
+     *
      * @return array<array-key, mixed>|null
      * @throws \JsonException When decoding fails and $throw is true.
      * @throws \UnexpectedValueException When the JSON root is not an object or array
@@ -134,10 +137,11 @@ if (!function_exists('jsonToArray')) {
     function jsonToArray(string $json, bool $throw = false): ?array
     {
         if ($throw) {
-            $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+            $decoded = \Omegaalfa\Utils\Json\Json::decode($json);
         } else {
-            $decoded = json_decode($json, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
+            try {
+                $decoded = \Omegaalfa\Utils\Json\Json::decode($json);
+            } catch (\JsonException) {
                 return null;
             }
         }

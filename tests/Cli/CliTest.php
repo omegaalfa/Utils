@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Omegaalfa\Utils\Cli\Application;
 use Omegaalfa\Utils\Cli\Input;
 use Omegaalfa\Utils\Cli\Output;
+use Omegaalfa\Utils\Cli\ProgressBar;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -147,6 +148,72 @@ final class CliTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         $output->table(['A', 'B'], [['only one']]);
+    }
+
+    public function testProgressBarRendersProgressAndFinishesOnItsOwnLine(): void
+    {
+        [$output, $stdout] = $this->cliOutput();
+        $bar = new ProgressBar($output, max: 4, width: 8);
+
+        $bar->start();
+        $bar->advance();
+        $bar->advance(2);
+        $bar->finish();
+
+        self::assertSame(4, $bar->current());
+        self::assertSame(
+            "\r[        ]   0% (0/4)" .
+            "\r[==      ]  25% (1/4)" .
+            "\r[======  ]  75% (3/4)" .
+            "[========] 100% (4/4)" . PHP_EOL,
+            $this->contents($stdout),
+        );
+    }
+
+    public function testProgressBarClampsStepsAndSupportsResets(): void
+    {
+        [$output, $stdout] = $this->cliOutput();
+        $bar = new ProgressBar($output, max: 2, width: 4);
+
+        $bar->start();
+        $bar->advance(50);
+        self::assertSame(2, $bar->current());
+
+        $bar->start();
+        self::assertSame(0, $bar->current());
+        self::assertStringContainsString('(0/2)', $this->contents($stdout));
+    }
+
+    public function testProgressBarRejectsInvalidConfigurationAndSteps(): void
+    {
+        [$output] = $this->cliOutput();
+
+        foreach (
+            [
+                static fn () => new ProgressBar($output, max: 0),
+                static fn () => new ProgressBar($output, max: 1, width: 0),
+            ] as $operation
+        ) {
+            try {
+                $operation();
+                self::fail('Invalid progress bar configuration must be rejected.');
+            } catch (InvalidArgumentException) {
+                self::addToAssertionCount(1);
+            }
+        }
+
+        $this->expectException(InvalidArgumentException::class);
+        (new ProgressBar($output, max: 2))->advance(-1);
+    }
+
+    /** @param resource $stream */
+    private function contents($stream): string
+    {
+        rewind($stream);
+        $contents = stream_get_contents($stream);
+        self::assertIsString($contents);
+
+        return $contents;
     }
 
     /** @return array{Output, resource, resource} */

@@ -162,6 +162,7 @@ if ($resource !== null) {
 | `isWritable()` | `bool` | Interpreta o modo nativo. |
 | `read(int $length)` | `string` | Zero retorna string vazia; negativo é inválido. |
 | `write(string $data)` | `int` | Retorna bytes gravados; escrita parcial é possível como em `fwrite()`. |
+| `copyTo(Stream $out, int $bufferSize = 8192)` | `int` | Copia da posição atual até EOF em blocos; retorna bytes gravados no destino. Rejeita copiar para si mesmo, buffer não positivo ou destino não gravável. |
 | `getContents()` | `string` | Lê da posição atual até EOF. |
 | `lines(bool $rewind = true)` | `Generator<int,string>` | Produz linhas mantendo terminadores. |
 | `csvRows(...)` | `Generator<int,list<string|null>>` | Produz registros via `fgetcsv()`; controles devem ter um byte. |
@@ -228,7 +229,6 @@ Não há benchmark publicado. `read()`, `write()` e acesso a metadados delegam �
 ## Oportunidades de melhoria
 
 - Exceptions específicas poderiam distinguir abertura, modo e estado fechado.
-- Um método de cópia incremental entre streams reduziria boilerplate sem carregar tudo em memória.
 - Tipos de resource não podem ser expressos nativamente em propriedades PHP; futuras versões da linguagem podem melhorar o contrato.
 - Benchmarks com arquivos e CSV de tamanhos variados ajudariam a quantificar overhead.
 

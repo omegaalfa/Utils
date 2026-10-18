@@ -108,6 +108,8 @@ $filesystem->move(
 | `move(...)` | `void` | Overwrite tenta substituição atômica e usa backup com rollback como fallback. |
 | `delete(string $path)` | `void` | Arquivo/link; recusa diretórios. Ausência é idempotente. |
 | `files(string $directory = '.', bool $recursive = false)` | `list<string>` | Caminhos relativos ordenados. |
+| `find(string $pattern, array $filters = [])` | `list<string>` | Busca recursiva por basename com curingas `*`/`?` e filtros `callable(SplFileInfo): bool`. |
+| `deleteRecursive(string $path, bool $force = false)` | `bool` | Arquivo/link: remove sempre (link não é seguido). Diretório: exige `force: true` se não estiver vazio. Retorna `false` quando nada existia. |
 | `size()`, `lastModified()`, `permissions()` | `int` | Metadados nativos. |
 | `changePermissions(string $path, int $permissions)` | `void` | Intervalo 0000–0777. |
 | `stream(string $path, string $mode = 'rb')` | `Stream` | Reutiliza o módulo Stream. |
@@ -160,7 +162,7 @@ Não há benchmark publicado. Leitura completa aloca conforme o arquivo; `stream
 
 ## Oportunidades de melhoria
 
-Adapters remotos devem ser outro pacote. Delete recursivo exigiria API deliberadamente destrutiva. Cópia incremental entre streams e filtros de busca podem ser adicionados sem mudar a segurança da raiz. Benchmarks por filesystem ainda são necessários.
+Adapters remotos devem ser outro pacote. Benchmarks por filesystem ainda são necessários.
 
 ## Contribuição e licença
 

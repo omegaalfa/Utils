@@ -139,6 +139,18 @@ Exceptions que escapam do handler são impressas em stderr e viram exit code 1. 
 | `ask(string, ?string)` | pergunta e default |
 | `table(array $headers, array $rows)` | tabela alinhada com `mb_strwidth()` |
 
+### ProgressBar
+
+| Método | Função |
+|---|---|
+| `__construct(Output $output, int $max, int $width = 30)` | Limite e largura devem ser positivos. |
+| `start()` | Zera e redesenha o primeiro quadro. |
+| `advance(int $step = 1)` | Avança e redesenha; passo não pode ser negativo e é limitado ao máximo. |
+| `finish()` | Completa a barra e encerra a linha com newline. |
+| `current()` | Passos concluídos. |
+
+A barra usa ASCII puro e redesenha com `\r`; `finish()` escreve sem `\r` para fechar a linha.
+
 ## Fluxo
 
 ```mermaid
@@ -186,7 +198,7 @@ Symfony Console oferece definitions, eventos, completion e progress com escopo m
 
 ## Oportunidades de melhoria
 
-Definitions tipadas, progress bar e completion merecem contratos próprios. Sinais POSIX seriam opcionais e dependentes de extensão. Middleware de comando pode ser útil, mas aumentaria bastante a arquitetura.
+Definitions tipadas e completion merecem contratos próprios. Sinais POSIX seriam opcionais e dependentes de extensão. Middleware de comando pode ser útil, mas aumentaria bastante a arquitetura.
 
 ## Contribuição e licença
 

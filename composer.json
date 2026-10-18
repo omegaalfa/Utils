@@ -37,7 +37,7 @@
     "phpstan/phpstan": "^2.0"
   },
   "scripts": {
-    "test": "vendor/bin/phpunit",
+    "test": "vendor/bin/phpunit --no-coverage",
     "test:unit": "vendor/bin/phpunit --testsuite unit",
     "test:coverage": "vendor/bin/phpunit --coverage-html coverage",
     "analyse": "vendor/bin/phpstan analyse --no-progress --level=max src helpers tests",

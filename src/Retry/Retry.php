@@ -15,6 +15,7 @@ final class Retry
      * @param list<string> $retryOn
      * @param null|callable(Throwable, int): bool $shouldRetry
      * @param null|callable(Throwable, int, bool): void $onFailure
+     * @param null|callable(int): void $sleeper Receives the delay in milliseconds; defaults to {@see usleep()}.
      * @return TResult
      * @throws Throwable
      */
@@ -28,6 +29,7 @@ final class Retry
         ?callable $shouldRetry = null,
         ?callable $onFailure = null,
         int $maxDelayMilliseconds = 60_000,
+        ?callable $sleeper = null,
     ): mixed {
         self::validate(
             $attempts,
@@ -61,7 +63,11 @@ final class Retry
                     : $delay;
 
                 if ($sleep > 0) {
-                    usleep($sleep * 1_000);
+                    if ($sleeper === null) {
+                        usleep($sleep * 1_000);
+                    } else {
+                        $sleeper($sleep);
+                    }
                 }
 
                 if ($delay >= $maxDelayMilliseconds) {

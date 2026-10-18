@@ -111,6 +111,7 @@ $result = Retry::attempt(
 | `shouldRetry` | null | `callable(Throwable,int): bool`. |
 | `onFailure` | null | `callable(Throwable,int,bool): void`. |
 | `maxDelayMilliseconds` | 60000 | Teto de todos os intervalos; deve ser maior ou igual ao delay inicial. |
+| `sleeper` | null | `callable(int): void` recebendo o delay em ms; padrão é `usleep()`. |
 
 Retorna exatamente o retorno da callable. Quando encerra por falha, relança a mesma instância de exception.
 
@@ -148,7 +149,7 @@ O método é síncrono e bloqueia a thread durante delay. Não possui budget tot
 
 ## Oportunidades de melhoria
 
-Deadline monotônico, estratégia como enum/value object e integração async devem ser APIs separadas. Um callback de sleep injetável melhoraria testes determinísticos, mas adicionaria indireção ao hot path. Métricas podem integrar o Profiler sem criar dependência obrigatória.
+Deadline monotônico, estratégia como enum/value object e integração async devem ser APIs separadas. Métricas podem integrar o Profiler sem criar dependência obrigatória.
 
 ## Contribuição e licença
 
